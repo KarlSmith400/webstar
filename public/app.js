@@ -1,24 +1,9 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CONSTELLATIONS } from './constellations.js';
+import { camera, renderer, controls, flyToPosition, toScreenPx, lockToEarth, freeLook, resetCamera, updateCamera } from './camera.js';
 
 // --- Scene setup ---
 const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100000);
-camera.position.set(0, 0, 80);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById('scene').appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 0.1;
-controls.maxDistance = 5000;
-controls.target.set(0, 0, 0); // Always orbit Sol
 
 // --- Sol marker (invisible sphere just for raycasting) ---
 const sunGeom = new THREE.SphereGeometry(0.5, 8, 8);
@@ -229,7 +214,6 @@ function updateLabels() {
 }
 
 // --- Click detection ---
-const _vec = new THREE.Vector3();
 let selectedMarker = null;
 let dragMoved = false;
 const HIT_RADIUS_PX = 18; // pixels
@@ -239,15 +223,6 @@ renderer.domElement.addEventListener('mousemove', () => { dragMoved = true; });
 renderer.domElement.addEventListener('mouseup', (e) => {
   if (!dragMoved) onMouseClick(e);
 });
-
-function toScreenPx(worldPos) {
-  _vec.copy(worldPos).project(camera);
-  return {
-    x: (_vec.x * 0.5 + 0.5) * window.innerWidth,
-    y: (-_vec.y * 0.5 + 0.5) * window.innerHeight,
-    behind: _vec.z > 1
-  };
-}
 
 function onMouseClick(e) {
   const mx = e.clientX;
@@ -575,8 +550,7 @@ let planetFilterActive = false;
 const planetHostIds = new Set();
 
 document.getElementById('freelook-btn').addEventListener('click', () => {
-  controls.enablePan = true;
-  controls.maxDistance = 5000;
+  freeLook();
   document.getElementById('freelook-btn').style.display = 'none';
 });
 
@@ -691,18 +665,10 @@ document.addEventListener('click', (e) => {
   if (!searchInput.contains(e.target)) searchResults.style.display = 'none';
 });
 
-// Smooth fly-to animation state
-let flyTarget = null;
-let flyFrom = null;
-let flyT = 1;
-const FLY_DURATION = 60; // frames
-
 function flyTo(star) {
-  flyFrom = { pos: camera.position.clone(), target: controls.target.clone() };
   const dest = new THREE.Vector3(star.x, star.y, star.z);
   const dir = camera.position.clone().sub(dest).normalize();
-  flyTarget = { pos: dest.clone().addScaledVector(dir, 5), target: dest };
-  flyT = 0;
+  flyToPosition(dest.clone().addScaledVector(dir, 5), dest);
   showInfo(star);
   placeMarker(star);
 }
@@ -860,46 +826,21 @@ document.getElementById('constellation-toggle').addEventListener('click', () => 
   btn.classList.toggle('active', constellationsVisible);
 
   if (constellationsVisible) {
-    // Fly to minimum distance from Sol — Earth viewpoint
-    flyFrom = { pos: camera.position.clone(), target: controls.target.clone() };
     const dir = camera.position.clone().normalize();
     if (dir.length() < 0.001) dir.set(0, 0, 1);
-    flyTarget = { pos: dir.multiplyScalar(controls.minDistance), target: new THREE.Vector3(0, 0, 0) };
-    flyT = 0;
-    // Lock to Sol: orbit only, no pan, no zoom out
-    controls.enablePan = false;
-    controls.maxDistance = controls.minDistance * 1.5;
-    controls.target.set(0, 0, 0);
+    flyToPosition(dir.multiplyScalar(controls.minDistance), new THREE.Vector3(0, 0, 0));
+    lockToEarth();
     document.getElementById('freelook-btn').style.display = 'block';
   } else {
-    // Restore free navigation
-    controls.enablePan = true;
-    controls.maxDistance = 5000;
+    freeLook();
     document.getElementById('freelook-btn').style.display = 'none';
   }
-});
-
-// --- Resize ---
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // --- Animate ---
 function animate() {
   requestAnimationFrame(animate);
-
-  // Smooth fly-to
-  if (flyT < 1) {
-    flyT = Math.min(1, flyT + 1 / FLY_DURATION);
-    const t = flyT < 0.5 ? 2 * flyT * flyT : -1 + (4 - 2 * flyT) * flyT; // ease in-out
-    camera.position.lerpVectors(flyFrom.pos, flyTarget.pos, t);
-    controls.target.lerpVectors(flyFrom.target, flyTarget.target, t);
-    controls.update();
-  }
-
-  controls.update();
+  updateCamera();
   updateMarkerScale();
   updateLabels();
   updateConstellationLabels();
@@ -909,9 +850,7 @@ function animate() {
 
 // --- Reset ---
 function resetView() {
-  camera.position.set(0, 0, 80);
-  controls.target.set(0, 0, 0);
-  controls.update();
+  resetCamera();
   hideInfo();
   removeMarker();
 }

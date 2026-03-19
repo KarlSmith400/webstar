@@ -6,10 +6,14 @@ const { getStars } = require('./data/stars');
 const { getPlanets } = require('./data/planets');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(compression()); // gzip all responses
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Pre-warm: start fetching/caching star data immediately on startup
+// so the first browser request doesn't wait for a cold GitHub download
+const starsReady = getStars().catch(err => console.error('Star pre-fetch failed:', err.message));
 
 const CACHE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
@@ -30,7 +34,8 @@ const STARS_CACHE = path.join(__dirname, 'data', 'hygdata_1000ly_v3.json');
 
 app.get('/api/stars', async (req, res) => {
   try {
-    await getStars(); // ensure cache file exists and is fresh
+    await starsReady; // wait for pre-warm, then ensure cache is fresh
+    await getStars();
     const etag = cacheHeaders(STARS_CACHE, res);
     if (etag && req.headers['if-none-match'] === etag) return res.sendStatus(304);
     res.setHeader('Content-Type', 'application/json');

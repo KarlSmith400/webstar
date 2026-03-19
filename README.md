@@ -50,7 +50,9 @@ WebStar/
 │   └── planets.json             ← Planet cache (git-ignored)
 ├── public/
 │   ├── index.html               ← Front end entry point + UI panels
-│   ├── app.js                   ← Three.js 3D scene + all interactions
+│   ├── app.js                   ← Star map scene + all interactions
+│   ├── camera.js                ← Shared camera, renderer, controls, flyTo, toScreenPx
+│   ├── solar-system.js          ← Solar system view (in development)
 │   └── constellations.js        ← Constellation line data
 ├── README.md
 ├── CHANGELOG.md
@@ -125,8 +127,15 @@ WebStar is a **data visualisation tool** -it does not sell or redistribute raw d
 - Star data: **17MB raw → 2.9MB gzipped** on first load; **0B on repeat visits** (browser HTTP cache, 7-day TTL with ETag validation)
 - Jump planner capped at 15 LY range and 6,000 line segments to keep interaction latency under 300ms
 - `/api/stars` streams the cache file directly -no server-side JSON parse/re-stringify overhead
+- CSV parsed as a stream on first run -peak server memory ~60MB (fits Render 512MB free tier)
+
+## Live Demo
+
+https://webstar-r7fc.onrender.com
+
+Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up. Subsequent visits are instant.
 
 ## Planned
 
-- [ ] Deploy to Netlify
+- [ ] Solar system zoom - click a planet-hosting star to enter a local system view
 - [ ] Proximity-based binary detection for non-Gliese stars

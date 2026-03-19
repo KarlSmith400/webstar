@@ -4,6 +4,18 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.13.0] - 2026-03-19
+
+### Added
+- **Deployed to Render** - live at https://webstar-r7fc.onrender.com (free tier, auto-deploys on push)
+
+### Fixed
+- **OOM crash on Render free tier** - replaced synchronous CSV parse (loaded full 32MB into memory) with streaming pipeline; peak memory dropped from ~300MB to ~60MB
+- **PORT binding** - server now uses `process.env.PORT` so Render can assign the correct port
+- **Star pre-warm** - server begins fetching/caching star data on startup rather than waiting for the first browser request
+
+---
+
 ## [0.12.0] - 2026-03-18
 
 ### Added
