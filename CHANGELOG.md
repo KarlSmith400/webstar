@@ -4,6 +4,13 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.19.0] - 2026-03-19
+
+### Added
+- **Ko-fi funding** - Support link in app footer; `package.json` funding field; `.github/FUNDING.yml` for GitHub Sponsor button
+
+---
+
 ## [0.18.0] - 2026-03-19
 
 ### Changed

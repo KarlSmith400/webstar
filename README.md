@@ -11,7 +11,7 @@ Renders a live 3D star map centred on Sol, pulling from the HYG astronomical dat
 - **Backend:** Node.js + Express + compression (gzip)
 - **Frontend:** Three.js (3D rendering), Vanilla JS
 - **Data Source:** HYG Star Database v41 (119,000+ stars), filtered to 1000 LY radius
-- **Hosting:** Netlify (planned)
+- **Hosting:** Render (free tier)
 
 ## Architecture
 
