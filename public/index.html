@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebStar</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: sans-serif; color: #fff; }
+    #scene { width: 100vw; height: 100vh; display: block; }
+
+    #info-panel {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 240px;
+    }
+    #info-panel h2 { font-size: 15px; margin-bottom: 2px; }
+    #star-designation { font-size: 11px; color: #666; margin-bottom: 8px; }
+    #star-details { font-size: 12px; color: #bbb; line-height: 1.9; }
+    #planet-header { font-size: 11px; color: #f90; margin-top: 10px; margin-bottom: 4px; letter-spacing: 0.05em; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }
+    #planet-list { font-size: 11px; color: #bbb; line-height: 1.8; }
+    #planet-list b { color: #fd9; }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 12px;
+      color: #444;
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    #reset-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    #reset-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .con-label {
+      position: fixed;
+      font-size: 10px;
+      font-weight: bold;
+      color: rgba(100,140,255,0.5);
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: 0.12em;
+      transform: translate(-50%, -50%);
+      text-shadow: 0 0 6px rgba(60,80,180,0.8);
+    }
+
+    .star-label {
+      position: fixed;
+      font-size: 11px;
+      color: rgba(255,255,255,0.85);
+      pointer-events: none;
+      white-space: nowrap;
+      text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+      transform: translateZ(0);
+    }
+
+    #jump-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 220px;
+    }
+    #jump-panel h3 { font-size: 13px; margin-bottom: 12px; color: #adf; letter-spacing: 0.05em; }
+    #jump-panel label { font-size: 12px; color: #999; display: block; margin-bottom: 4px; }
+    #jump-panel input[type=range] { width: 100%; margin-bottom: 2px; accent-color: #4af; }
+    #jump-panel .val { font-size: 12px; color: #fff; margin-bottom: 10px; }
+    #jump-panel button {
+      width: 100%; padding: 7px; margin-top: 4px;
+      background: rgba(68,170,255,0.15);
+      border: 1px solid rgba(68,170,255,0.3);
+      border-radius: 5px; color: #4af; font-size: 12px; cursor: pointer;
+    }
+    #jump-panel button:hover { background: rgba(68,170,255,0.3); }
+    #jump-panel button.active { background: rgba(68,170,255,0.4); color: #fff; }
+    #jump-origin { font-size: 12px; color: #adf; margin-top: 8px; min-height: 18px; }
+    #jump-counts { font-size: 12px; color: #888; margin-top: 6px; line-height: 1.8; }
+    #jump-counts b { color: #4af; }
+
+    #search-panel {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    #search-input {
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 14px;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+    }
+    #search-input::placeholder { color: #555; }
+    #search-results {
+      background: rgba(0,0,0,0.9);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      margin-top: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .search-result {
+      padding: 7px 14px;
+      font-size: 12px;
+      color: #ccc;
+      cursor: pointer;
+    }
+    .search-result:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    #route-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 220px;
+      display: none;
+    }
+    #route-panel h3 { font-size: 13px; margin-bottom: 10px; color: #fda; letter-spacing: 0.05em; }
+    #route-panel p { font-size: 12px; color: #999; line-height: 1.8; }
+    #route-panel b { color: #fda; }
+    #route-clear {
+      width: 100%; padding: 6px; margin-top: 8px;
+      background: rgba(255,180,80,0.15);
+      border: 1px solid rgba(255,180,80,0.3);
+      border-radius: 5px; color: #fda; font-size: 12px; cursor: pointer;
+    }
+    #route-clear:hover { background: rgba(255,180,80,0.3); }
+
+    /* Hover tooltip */
+    #star-tooltip {
+      position: fixed; display: none; pointer-events: none;
+      background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px; padding: 4px 9px; font-size: 11px; color: #ccc;
+      white-space: nowrap; z-index: 100;
+    }
+
+    /* Spectral legend */
+    #spectral-legend {
+      position: fixed; bottom: 110px; right: 20px;
+      background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px; padding: 8px 12px; font-size: 10px; color: #888;
+    }
+    #spectral-legend .title { color: #555; letter-spacing: 0.08em; margin-bottom: 5px; font-size: 9px; }
+    .spec-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+    .spec-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Distance ruler */
+    #ruler-panel {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(100,200,255,0.25);
+      border-radius: 8px; padding: 10px 18px; font-size: 12px; display: none; text-align: center;
+    }
+    #ruler-panel b { color: #7df; }
+
+    /* Nebula labels */
+    .nebula-label {
+      position: fixed; pointer-events: none; white-space: nowrap;
+      font-size: 10px; letter-spacing: 0.06em;
+      color: rgba(140,255,180,0.55);
+      text-shadow: 0 0 5px rgba(80,200,120,0.7);
+    }
+
+    /* Planet type sub-filter */
+    #planet-type-panel {
+      position: fixed; top: 54px; right: 290px;
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(255,180,50,0.2);
+      border-radius: 6px; padding: 6px; display: none; flex-direction: column; gap: 3px;
+    }
+    .ptype-btn {
+      padding: 4px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; text-align: left;
+      border: 1px solid rgba(255,180,50,0.15); background: rgba(255,180,50,0.05); color: #888;
+    }
+    .ptype-btn:hover { background: rgba(255,180,50,0.2); color: #fda; }
+    .ptype-btn.active { background: rgba(255,180,50,0.3); color: #fda; border-color: rgba(255,180,50,0.5); }
+
+    /* Keyboard shortcut hint on info panel */
+    #kbd-hints {
+      position: fixed; bottom: 20px; right: 20px;
+      font-size: 11px; color: #333; text-align: right; line-height: 2;
+    }
+    #kbd-hints kbd {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 3px; padding: 0 4px; font-size: 10px; font-family: monospace; color: #555;
+    }
+
+    /* Data sources hover popup */
+    #data-sources-btn {
+      color: #333; font-size: 11px; cursor: default; letter-spacing: 0.04em;
+    }
+    #data-sources-wrapper { display: inline-block; position: relative; }
+    #data-sources-popup {
+      display: none; position: absolute; bottom: 100%; right: 0;
+      background: rgba(0,0,0,0.88); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 14px 16px 18px; font-size: 11px; color: #888;
+      line-height: 1.9; text-align: left; min-width: 260px; white-space: nowrap;
+    }
+    #data-sources-wrapper:hover #data-sources-popup { display: block; }
+    #data-sources-popup b { color: #adf; }
+    #data-sources-popup a { color: #7af; text-decoration: none; }
+    #data-sources-btn:hover { color: #666; }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <svg id="label-lines" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
+
+  <div id="info-panel">
+    <h2 id="star-name"></h2>
+    <div id="star-designation"></div>
+    <div id="star-details"></div>
+    <div id="planet-section" style="display:none">
+      <div id="planet-header"></div>
+      <div id="planet-list"></div>
+    </div>
+  </div>
+
+  <button id="reset-btn">Reset View</button>
+  <button id="constellation-toggle" style="position:fixed;top:20px;right:130px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Show Constellations</button>
+  <button id="planet-filter" style="position:fixed;top:20px;right:290px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Show Planet Hosts</button>
+  <button id="ruler-btn" style="position:fixed;top:20px;right:450px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;" title="Click two stars to measure distance">Ruler</button>
+  <button id="screenshot-btn" style="position:fixed;top:20px;right:516px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;" title="Save screenshot">📷</button>
+  <button id="freelook-btn" style="display:none;position:fixed;top:54px;right:130px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#aaa;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">Unlock Position</button>
+
+  <div id="planet-type-panel">
+    <button class="ptype-btn active" data-type="all">All hosts</button>
+    <button class="ptype-btn" data-type="terrestrial">Terrestrial  &lt;1.6 R⊕</button>
+    <button class="ptype-btn" data-type="superearth">Super-Earth  1.6–4 R⊕</button>
+    <button class="ptype-btn" data-type="neptune">Neptune-like  4–10 R⊕</button>
+    <button class="ptype-btn" data-type="gasgiant">Gas Giant  &gt;10 R⊕</button>
+  </div>
+
+  <div id="ruler-panel">
+    <span id="ruler-text">Click a star to set ruler origin</span>
+  </div>
+
+  <div id="star-tooltip"></div>
+
+  <div id="spectral-legend">
+    <div class="title">SPECTRAL TYPE</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#9bb0ff"></div> O — Blue</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#aabfff"></div> B — Blue-white</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#cad7ff"></div> A — White</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#f8f7ff"></div> F — Yellow-white</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#fff4ea"></div> G — Yellow</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#ffd2a1"></div> K — Orange</div>
+    <div class="spec-row"><div class="spec-dot" style="background:#ffcc6f"></div> M — Red</div>
+  </div>
+
+  <div id="kbd-hints">
+    <kbd>C</kbd> Constellations &nbsp;<kbd>P</kbd> Planets &nbsp;<kbd>J</kbd> Jump planner<br>
+    <kbd>R</kbd> Reset &nbsp;<kbd>D</kbd> Ruler &nbsp;<kbd>Esc</kbd> Close panel<br>
+    <div id="data-sources-wrapper">
+      <span id="data-sources-btn">Data sources ⓘ</span>
+      <div id="data-sources-popup">
+        <b>Star data</b><br>
+        HYG Database v41 · <a href="https://github.com/astronexus/HYG-Database" target="_blank">astronexus.com</a><br>
+        David Nash · CC BY-SA 4.0<br><br>
+        <b>Exoplanet data</b><br>
+        <a href="https://exoplanetarchive.ipac.caltech.edu" target="_blank">NASA Exoplanet Archive</a><br>
+        Caltech/IPAC for NASA · Public domain<br><br>
+        <b>Solar system data</b><br>
+        JPL Solar System Dynamics<br>
+        NASA Science · Public domain
+      </div>
+    </div>
+    &nbsp;·&nbsp;
+    <a href="https://karlsmith.design" target="_blank" rel="noopener" style="color:#adf;text-decoration:none;font-size:12px;letter-spacing:0.06em;border-bottom:1px solid rgba(170,221,255,0.3);">karlsmith.design</a>
+  </div>
+
+  <div id="jump-panel">
+    <h3>JUMP PLANNER</h3>
+    <label>Jump range (LY)</label>
+    <input type="range" id="jump-range" min="1" max="15" value="10" step="0.5">
+    <div class="val"><span id="jump-range-val">10</span> LY</div>
+    <label>Max jumps</label>
+    <input type="range" id="jump-hops" min="1" max="6" value="3" step="1">
+    <div class="val"><span id="jump-hops-val">3</span> hops</div>
+    <button id="jump-toggle">Enable Jump Planner</button>
+    <div id="jump-origin"></div>
+    <div id="jump-counts"></div>
+  </div>
+
+  <div id="search-panel">
+    <input id="search-input" type="text" placeholder="Search stars...">
+    <div id="search-results"></div>
+  </div>
+
+  <div id="route-panel">
+    <h3>ROUTE FINDER</h3>
+    <p id="route-info">Shift+click two stars to find shortest jump path.</p>
+    <button id="route-clear">Clear Route</button>
+  </div>
+
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
