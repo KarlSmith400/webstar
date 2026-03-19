@@ -9,6 +9,10 @@
   "keywords": ["astronomy", "three.js", "star-map", "exoplanets", "3d", "visualization"],
   "author": "Karl Smith <karl@karlsmith.design>",
   "license": "ISC",
+  "funding": {
+    "type": "ko-fi",
+    "url": "https://ko-fi.com/karlsmith400"
+  },
   "type": "commonjs",
   "dependencies": {
     "compression": "^1.8.1",
