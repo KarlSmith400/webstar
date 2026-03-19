@@ -1,13 +1,13 @@
 {
   "name": "webstar",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Interactive 3D star map - 78,000 real stars to 1,000 light years with exoplanet data and jump planner",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["astronomy", "three.js", "star-map", "exoplanets", "3d", "visualization"],
+  "author": "Karl Smith <karl@karlsmith.design>",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
