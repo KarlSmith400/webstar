@@ -52,7 +52,7 @@ WebStar/
 │   ├── index.html               ← Front end entry point + UI panels
 │   ├── app.js                   ← Star map scene + all interactions
 │   ├── camera.js                ← Shared camera, renderer, controls, flyTo, toScreenPx
-│   ├── solar-system.js          ← Solar system view (in development)
+│   ├── solar-system.js          ← Solar system view - Kepler mechanics, orbits, HZ, planet detail
 │   └── constellations.js        ← Constellation line data
 ├── README.md
 ├── CHANGELOG.md
@@ -67,12 +67,12 @@ WebStar/
 - **Planetary systems** -confirmed exoplanet data from NASA Exoplanet Archive displayed per star; Sol shows all 8 planets with verified JPL/NASA data
 - **Planet host filter** -highlights ~554 stars with confirmed exoplanets in amber, dims all others
 - **Double-click to fly** -smooth camera animation to any star
-- **Star search** -type a name, fly to it
+- **Star search** -type a name or Bayer designation (e.g. "eps Eri", "beta Pic"); Greek letter expansion means "epsilon" finds all eps-X stars; results show both proper name and Bayer designation
 - **Labels** -brightest named stars always labelled; named stars within 5 LY always labelled regardless of apparent magnitude; companions stacked below primary
 - **Spectral colour coding** -O (blue) through M (orange-red)
 - **Jump planner** -set jump range (LY) and max hops, visualises reachable network from any star with hop-count badge and star highlighting; spatial grid index keeps BFS fast at 1000 LY scale
 - **Route finder** -Shift+click two stars for shortest BFS jump path
-- **Constellation lines** -40 constellations with IAU proper names; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
+- **Constellation lines** -88 constellations with complete outlines from Stellarium's western sky culture HIP-pair data; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
 - **Binary companion links** -amber lines between confirmed close companion pairs (< 0.1 LY, Gliese catalog stars)
 - **Screenshot** -📷 button saves current view as PNG
 - **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls; hint displayed bottom-right
@@ -81,6 +81,9 @@ WebStar/
 - **Exoplanet type sub-filter** -when planet host filter is active, refine by planet type: terrestrial / super-Earth / Neptune-like / gas giant
 - **Nebulae & clusters** -12 deep-sky objects (Orion Nebula, Pleiades, Hyades, Crab Nebula, Eagle Nebula, and more) at correct 3D positions with labels
 - **Touch support** -tap to select stars on mobile
+- **Solar system view** -double-click any planet-host star (or tap then press View System Map on mobile) to enter a live 3D system view; full 6-element Keplerian mechanics (a, e, i, Ω, ω, M₀) with Newton-Raphson solver; Sol opens at real current planetary positions (epoch J2000); habitable zone ring (Kopparapu 2013); planet meshes colour-coded by equilibrium temperature; orbit rings with correct 3D orientation; time controls (1d/s to 1yr/s + pause); planet detail panel on click; data-quality tags distinguish observed vs derived orbital elements; orbital distances scaled for visibility
+- **Spectral colour modes** -toggle between True (photometric blackbody colours, realistic) and Enhanced (saturated, high-contrast) via the spectral legend
+- **Debris belts and rings** -known asteroid belts, Kuiper belts, and debris disks rendered in the system view; Sol shows Asteroid Belt and Kuiper Belt; six further systems show published disk data: Epsilon Eridani, Beta Pictoris (near-edge-on at 87 deg), Tau Ceti, Fomalhaut, Vega; belt extents listed in the system panel
 
 ## Data Sources & Licensing
 
@@ -110,14 +113,25 @@ WebStar is a **data visualisation tool** -it does not sell or redistribute raw d
 - **Attribution:** "Exoplanet data: NASA Exoplanet Archive, operated by Caltech/IPAC under the Exoplanet Exploration Program"
 
 ### Sol System Data (hard-coded)
-- **Orbital periods, radii, masses:** [JPL Solar System Dynamics](https://ssd.jpl.nasa.gov/planets/phys_par.html) -NASA/JPL public domain
+- **Orbital periods, semi-major axes, eccentricities, inclinations, radii, masses:** [JPL Solar System Dynamics](https://ssd.jpl.nasa.gov/planets/phys_par.html) -NASA/JPL public domain
 - **Mean surface temperatures:** [NASA Science Solar System Temperatures](https://science.nasa.gov/solar-system/temperatures-across-our-solar-system/) -NASA public domain
+
+### Constellation Line Data
+- **Source:** Stellarium western sky culture `constellationship.fab` (v0.21.3) - [github.com/Stellarium/stellarium](https://github.com/Stellarium/stellarium)
+- **Author:** Fabien Chereau ([@xalioth](https://github.com/xalioth)), founder and original developer of Stellarium. Copyright (C) 2004-2026 Fabien Chereau et al.
+- **Licence:** GPL-2.0+ (Stellarium project). The current equivalent (`skycultures/modern/`) is CC BY-SA 4.0.
+- **Use here:** ⚠️ The HIP-pair line data is embedded in `public/constellations.js` and distributed to browsers, which differs from the runtime-fetch model used for HYG/NASA data. Strictly speaking, GPL-2.0+ or CC BY-SA ShareAlike applies to this derived file. For a fully clean commercial deployment, consider replacing with the [MarcvdSluys/ConstellationLines](https://github.com/MarcvdSluys/ConstellationLines) dataset (CC BY 4.0, no ShareAlike).
+- **Attribution:** "Constellation line data from Stellarium by Fabien Chereau et al., GPL-2.0+ — [stellarium.org](https://stellarium.org)"
+- **What this covers:** 88 constellation outlines as Hipparcos catalog number pairs defining which stars to connect. The underlying IAU constellation definitions are public domain; the specific line patterns are Stellarium's editorial work.
+
+### Habitable Zone Formula
+- **Kopparapu et al. 2013** -inner edge 0.95*sqrt(L) AU, outer edge 1.37*sqrt(L) AU; freely available published research
 
 ## Data Notes
 
 - Star data filtered to **1000 LY radius** from the full HYG v41 dataset -captures all major constellation stars including Orion belt, Antares, Rigel
-- Star cache (`hygdata_1000ly_v3.json`) includes: coordinates, magnitude, absolute magnitude, luminosity, spectral type, Bayer designation, constellation, HIP number, binary companion fields; null fields omitted, coordinates rounded to 4dp
-- Planet data from **NASA Exoplanet Archive** `pscomppars` table -one row per planet, controversial planets excluded (`pl_controv_flag=0`)
+- Star cache (`hygdata_1000ly_v5.json`) includes: coordinates, magnitude, absolute magnitude, luminosity, spectral type, Bayer designation, constellation, HIP number, binary companion fields; null fields omitted, coordinates rounded to 4dp
+- Planet data from **NASA Exoplanet Archive** `pscomppars` table -one row per planet, controversial planets excluded (`pl_controv_flag=0`); orbital fields: `pl_orbper`, `pl_orbsmax`, `pl_orbeccen`, `pl_orbincl`, `pl_orblper` (argument of periastron), `pl_orbtper` (time of periastron, BJD)
 - Sol's planets hard-coded from JPL and NASA Science; not in the exoplanet archive (it covers other stars only)
 - `comp_primary` is **only populated for Gliese catalog stars** per HYG documentation; binary links further validated by requiring companions to be < 0.1 LY apart physically
 - Both caches auto-refresh every 7 days
@@ -137,5 +151,4 @@ Hosted on Render free tier. First visit after a period of inactivity may take ~3
 
 ## Planned
 
-- [ ] Solar system zoom - click a planet-hosting star to enter a local system view
 - [ ] Proximity-based binary detection for non-Gliese stars

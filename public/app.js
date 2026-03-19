@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONSTELLATIONS } from './constellations.js';
 import { camera, renderer, controls, flyToPosition, toScreenPx, lockToEarth, freeLook, resetCamera, updateCamera } from './camera.js';
+import * as SolarSystem from './solar-system.js';
 
 // --- Scene setup ---
 const scene = new THREE.Scene();
@@ -15,20 +16,24 @@ scene.add(sun);
 const gridHelper = new THREE.GridHelper(500, 20, 0x111133, 0x111133);
 scene.add(gridHelper);
 
-// --- Spectral colour map ---
-const spectralColors = {
-  O: 0x9bb0ff,
-  B: 0xaabfff,
-  A: 0xcad7ff,
-  F: 0xf8f7ff,
-  G: 0xfff4ea,
-  K: 0xffd2a1,
-  M: 0xffcc6f,
+// --- Spectral colour palettes ---
+// True photometric: actual visual colours derived from blackbody temperature (subtle, realistic)
+const SPECTRAL_TRUE = {
+  O: 0x9bb0ff, B: 0xaabfff, A: 0xcad7ff,
+  F: 0xf8f7ff, G: 0xfff4ea, K: 0xffd2a1, M: 0xffcc6f,
+};
+// Enhanced: saturated colours for easy spectral-type identification on screen
+const SPECTRAL_ENHANCED = {
+  O: 0x4477ff, B: 0x88aaff, A: 0xddeeff,
+  F: 0xffffff, G: 0xffee44, K: 0xff9922, M: 0xff4411,
 };
 
+let spectralPalette = SPECTRAL_TRUE;
+let trueColorsMode  = true;
+
 function spectToHex(spect) {
-  if (!spect) return 0xffffff;
-  return spectralColors[spect[0].toUpperCase()] || 0xffffff;
+  if (!spect) return trueColorsMode ? 0xffffff : 0xdddddd;
+  return spectralPalette[spect[0].toUpperCase()] || (trueColorsMode ? 0xffffff : 0xdddddd);
 }
 
 // --- Build star field ---
@@ -225,6 +230,7 @@ renderer.domElement.addEventListener('mouseup', (e) => {
 });
 
 function onMouseClick(e) {
+  if (SolarSystem.isActive()) return;
   const mx = e.clientX;
   const my = e.clientY;
 
@@ -349,7 +355,33 @@ function removeMarker() {
 // Planetary system data keyed by HIP number and hostname
 let planetsByHip = {};
 
+// Look up a system for a star: try HIP, proper name, then Bayer+constellation (matches NASA hostnames like "tau Cet")
+function findSystem(star) {
+  const hipKey   = star.hip ? String(star.hip).trim() : null;
+  const bayerKey = (star.bayer && star.con) ? `${star.bayer} ${star.con}` : null;
+  return (hipKey   && planetsByHip[hipKey])
+      || (star.name && planetsByHip[star.name])
+      || (bayerKey  && planetsByHip[bayerKey])
+      || null;
+}
+let _infoPanelStar = null;
+let _infoPanelSystem = null;
+let _lastShowInfoTime = 0;
+let _resizing = false;
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  _resizing = true;
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { _resizing = false; }, 600);
+});
+window.addEventListener('orientationchange', () => {
+  _resizing = true;
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { _resizing = false; }, 800);
+});
+
 function showInfo(star) {
+  _lastShowInfoTime = Date.now();
   document.getElementById('star-name').textContent = star.name || 'Unnamed Star';
 
   // Designation line
@@ -398,13 +430,12 @@ function showInfo(star) {
     .join('<br>');
 
   // Planet data — match by HIP first, then by star name
-  const hipKey = star.hip ? String(star.hip).trim() : null;
-  const system = (hipKey && planetsByHip[hipKey])
-    || (star.name && planetsByHip[star.name])
-    || null;
+  const system = findSystem(star);
   const planetSection = document.getElementById('planet-section');
 
   if (system && system.planets.length > 0) {
+    _infoPanelStar   = star;
+    _infoPanelSystem = system;
     document.getElementById('planet-header').textContent =
       `⬡ ${system.planets.length} KNOWN PLANET${system.planets.length > 1 ? 'S' : ''}`;
     document.getElementById('planet-list').innerHTML = system.planets
@@ -421,6 +452,7 @@ function showInfo(star) {
       }).join('<br>');
     planetSection.style.display = 'block';
   } else {
+    _infoPanelStar = _infoPanelSystem = null;
     planetSection.style.display = 'none';
   }
 
@@ -428,6 +460,8 @@ function showInfo(star) {
 }
 
 function hideInfo() {
+  if (_resizing) return; // ignore events fired during orientation change
+  if (Date.now() - _lastShowInfoTime < 150) return; // ignore ghost close after touch
   document.getElementById('info-panel').style.display = 'none';
 }
 
@@ -557,7 +591,7 @@ document.getElementById('freelook-btn').addEventListener('click', () => {
 document.getElementById('planet-filter').addEventListener('click', () => {
   planetFilterActive = !planetFilterActive;
   const btn = document.getElementById('planet-filter');
-  btn.textContent = planetFilterActive ? 'All Stars' : 'Show Planet Hosts';
+  btn.textContent = 'Planet Hosts';
   btn.style.background = planetFilterActive ? 'rgba(255,180,50,0.3)' : 'rgba(255,255,255,0.1)';
   btn.style.borderColor = planetFilterActive ? 'rgba(255,180,50,0.5)' : 'rgba(255,255,255,0.2)';
   btn.style.color = planetFilterActive ? '#fda' : '#fff';
@@ -639,18 +673,52 @@ document.getElementById('jump-toggle').addEventListener('click', () => {
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 
+// Greek letter expansion for Bayer designation search
+const GREEK_EXPAND = {
+  alpha:'alp', beta:'bet', gamma:'gam', delta:'del', epsilon:'eps', zeta:'zet',
+  eta:'eta', theta:'the', iota:'iot', kappa:'kap', lambda:'lam', mu:'mu', nu:'nu',
+  xi:'xi', omicron:'omi', pi:'pi', rho:'rho', sigma:'sig', tau:'tau',
+  upsilon:'ups', phi:'phi', chi:'chi', psi:'psi', omega:'ome',
+};
+
+function _starSearchKey(s) {
+  const parts = [];
+  if (s.name)  parts.push(s.name.toLowerCase());
+  if (s.bayer && s.con) {
+    const bf = (s.bayer + ' ' + s.con).toLowerCase();
+    parts.push(bf);
+    // also build expanded form e.g. "epsilon eri" for "eps eri"
+    for (const [full, abbr] of Object.entries(GREEK_EXPAND)) {
+      if (s.bayer.toLowerCase().startsWith(abbr)) {
+        parts.push((full + ' ' + s.con).toLowerCase());
+        break;
+      }
+    }
+  }
+  return parts.join('|');
+}
+
+function _starLabel(star) {
+  const dist = star.dist > 0 ? star.dist.toFixed(1) + ' pc' : 'Sol';
+  const bayer = star.bayer && star.con ? `${star.bayer} ${star.con}` : null;
+  if (star.name && bayer) return `${star.name}  (${bayer})  ·  ${dist}`;
+  if (star.name)          return `${star.name}  ·  ${dist}`;
+  if (bayer)              return `${bayer}  ·  ${dist}`;
+  return `HIP ${star.hip}  ·  ${dist}`;
+}
+
 searchInput.addEventListener('input', () => {
   const q = searchInput.value.trim().toLowerCase();
   searchResults.innerHTML = '';
   if (q.length < 2) { searchResults.style.display = 'none'; return; }
 
-  const matches = starDataArray.filter(s => s.name && s.name.toLowerCase().includes(q)).slice(0, 8);
+  const matches = starDataArray.filter(s => _starSearchKey(s).includes(q)).slice(0, 8);
   if (matches.length === 0) { searchResults.style.display = 'none'; return; }
 
   matches.forEach(star => {
     const div = document.createElement('div');
     div.className = 'search-result';
-    div.textContent = `${star.name}  (${star.dist > 0 ? star.dist.toFixed(1) + ' pc' : 'Sol'})`;
+    div.textContent = _starLabel(star);
     div.addEventListener('click', () => {
       flyTo(star);
       searchInput.value = '';
@@ -674,12 +742,16 @@ function flyTo(star) {
 }
 
 renderer.domElement.addEventListener('dblclick', (e) => {
+  if (SolarSystem.isActive()) return;
   const mx = e.clientX, my = e.clientY;
 
   // Check Sol
   const solScreen = toScreenPx(new THREE.Vector3(0, 0, 0));
   if (!solScreen.behind && Math.hypot(mx - solScreen.x, my - solScreen.y) < HIT_RADIUS_PX) {
-    flyTo({ id: 'sol', name: 'Sol (The Sun)', mag: -26.74, absmag: 4.83, lum: 1.0, dist: 0, spect: 'G2V', x: 0, y: 0, z: 0 });
+    const solStar = { id: 'sol', name: 'Sol (The Sun)', mag: -26.74, absmag: 4.83, lum: 1.0, dist: 0, spect: 'G2V', x: 0, y: 0, z: 0 };
+    const solSys = planetsByHip['Sol'];
+    if (solSys) { removeMarker(); SolarSystem.enter(solStar, solSys); }
+    else flyTo(solStar);
     return;
   }
 
@@ -696,7 +768,15 @@ renderer.domElement.addEventListener('dblclick', (e) => {
     if (aName !== bName) return aName - bName;
     return a.star.mag - b.star.mag;
   });
-  if (dblCandidates.length > 0) flyTo(dblCandidates[0].star);
+  if (dblCandidates.length === 0) return;
+  const star = dblCandidates[0].star;
+  const system = findSystem(star);
+  if (system) {
+    removeMarker();
+    SolarSystem.enter(star, system);
+  } else {
+    flyTo(star);
+  }
 });
 
 // --- Route Finder ---
@@ -761,18 +841,18 @@ const constellationCentroids = []; // { name, pos: THREE.Vector3 }
 const constellationLabelEls = [];  // parallel array of divs
 
 function buildConstellationLines(stars) {
-  const nameMap = new Map();
+  const hipMap = new Map();
   for (const s of stars) {
-    if (s.name) nameMap.set(s.name.toLowerCase(), s);
+    if (s.hip) hipMap.set(parseInt(s.hip, 10), s);
   }
 
   const positions = [];
 
   for (const con of CONSTELLATIONS) {
     const found = new Set();
-    for (const [nameA, nameB] of con.lines) {
-      const a = nameMap.get(nameA.toLowerCase());
-      const b = nameMap.get(nameB.toLowerCase());
+    for (const [hipA, hipB] of con.pairs) {
+      const a = hipMap.get(hipA);
+      const b = hipMap.get(hipB);
       if (!a || !b) continue;
       positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
       found.add(a); found.add(b);
@@ -822,7 +902,7 @@ document.getElementById('constellation-toggle').addEventListener('click', () => 
   if (constellationLines) constellationLines.visible = constellationsVisible;
   constellationLabelEls.forEach(el => el.style.display = constellationsVisible ? 'block' : 'none');
   const btn = document.getElementById('constellation-toggle');
-  btn.textContent = constellationsVisible ? 'Hide Constellations' : 'Show Constellations';
+  btn.textContent = 'Constellations';
   btn.classList.toggle('active', constellationsVisible);
 
   if (constellationsVisible) {
@@ -838,14 +918,24 @@ document.getElementById('constellation-toggle').addEventListener('click', () => 
 });
 
 // --- Animate ---
-function animate() {
+let _lastFrame = 0;
+function animate(ts) {
   requestAnimationFrame(animate);
+  const dt = Math.min(ts - _lastFrame, 100); // cap at 100ms to avoid huge jumps
+  _lastFrame = ts;
+
   updateCamera();
-  updateMarkerScale();
-  updateLabels();
-  updateConstellationLabels();
-  updateNebulaLabels();
-  renderer.render(scene, camera);
+
+  if (SolarSystem.isActive()) {
+    SolarSystem.update(dt);
+    renderer.render(SolarSystem.scene, camera);
+  } else {
+    updateMarkerScale();
+    updateLabels();
+    updateConstellationLabels();
+    updateNebulaLabels();
+    renderer.render(scene, camera);
+  }
 }
 
 // --- Reset ---
@@ -868,6 +958,10 @@ document.getElementById('screenshot-btn').addEventListener('click', () => {
 // --- Keyboard shortcuts ---
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return; // don't fire in search box
+  if (SolarSystem.isActive()) {
+    if (e.key === 'Escape') SolarSystem.exit();
+    return;
+  }
   switch (e.key.toLowerCase()) {
     case 'r': resetView(); break;
     case 'escape': hideInfo(); removeMarker(); break;
@@ -876,6 +970,58 @@ document.addEventListener('keydown', e => {
     case 'j': document.getElementById('jump-toggle').click(); break;
     case 'd': document.getElementById('ruler-btn').click(); break;
   }
+});
+
+// --- Colour mode toggle ---
+const LEGEND_COLORS = {
+  true:  { O:'#9bb0ff', B:'#aabfff', A:'#cad7ff', F:'#f8f7ff', G:'#fff4ea', K:'#ffd2a1', M:'#ffcc6f' },
+  false: { O:'#4477ff', B:'#88aaff', A:'#ddeeff', F:'#ffffff', G:'#ffee44', K:'#ff9922', M:'#ff4411' },
+};
+document.getElementById('color-mode-btn').addEventListener('click', () => {
+  trueColorsMode  = !trueColorsMode;
+  spectralPalette = trueColorsMode ? SPECTRAL_TRUE : SPECTRAL_ENHANCED;
+  const btn = document.getElementById('color-mode-btn');
+  btn.textContent = trueColorsMode ? 'Enhanced' : 'True';
+  btn.style.color = trueColorsMode ? '#666' : '#adf';
+  // Update legend dots
+  const cols = LEGEND_COLORS[trueColorsMode];
+  for (const [k, v] of Object.entries(cols)) {
+    const dot = document.getElementById(`dot-${k}`);
+    if (dot) dot.style.background = v;
+  }
+  updateStarColors();
+});
+
+// --- View System Map button (info panel, mobile-friendly) ---
+document.getElementById('enter-system-btn').addEventListener('click', () => {
+  if (!_infoPanelStar || !_infoPanelSystem) return;
+  removeMarker();
+  hideInfo();
+  SolarSystem.enter(_infoPanelStar, _infoPanelSystem);
+});
+
+// --- Solar system back button ---
+document.getElementById('sys-back-btn').addEventListener('click', () => {
+  if (!SolarSystem.isActive()) return;
+  SolarSystem.exit();
+  resetCamera();
+});
+
+// --- Planet click in system view ---
+renderer.domElement.addEventListener('click', (e) => {
+  if (SolarSystem.isActive()) SolarSystem.handleClick(e);
+});
+
+// --- System time controls ---
+document.querySelectorAll('.ts-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ts-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    SolarSystem.setTimeScale(parseFloat(btn.dataset.scale));
+  });
+});
+document.getElementById('sys-pause-btn').addEventListener('click', () => {
+  SolarSystem.togglePause();
 });
 
 // --- Hover tooltip ---
@@ -974,8 +1120,9 @@ renderer.domElement.addEventListener('touchstart', e => {
 renderer.domElement.addEventListener('touchend', e => {
   if (!touchStartPos) return;
   const t = e.changedTouches[0];
-  if (Math.hypot(t.clientX - touchStartPos.x, t.clientY - touchStartPos.y) < 8)
+  if (Math.hypot(t.clientX - touchStartPos.x, t.clientY - touchStartPos.y) < 8) {
     onMouseClick({ clientX: t.clientX, clientY: t.clientY, shiftKey: false });
+  }
   touchStartPos = null;
 }, { passive: true });
 
@@ -1002,8 +1149,7 @@ function rebuildPlanetHostIds() {
   planetHostIds.clear();
   const predicate = PLANET_TYPES[planetTypeFilter] || PLANET_TYPES.all;
   for (const star of starDataArray) {
-    const hipKey = star.hip ? String(star.hip).trim() : null;
-    const sys = (hipKey && planetsByHip[hipKey]) || (star.name && planetsByHip[star.name]) || null;
+    const sys = findSystem(star);
     if (sys && sys.planets.some(predicate)) planetHostIds.add(star.id);
   }
   // Always include Sol
@@ -1091,14 +1237,19 @@ async function init() {
   const solSystem = {
     hostname: 'Sol', dist_pc: 0,
     planets: [
-      { name: 'Mercury', period_days: 87.97,    radius_earth: 0.383, mass_earth: 0.0553, temp_k: 440, method: 'Known', year: null },
-      { name: 'Venus',   period_days: 224.70,   radius_earth: 0.950, mass_earth: 0.815,  temp_k: 737, method: 'Known', year: null },
-      { name: 'Earth',   period_days: 365.25,   radius_earth: 1.000, mass_earth: 1.000,  temp_k: 288, method: 'Known', year: null },
-      { name: 'Mars',    period_days: 686.97,   radius_earth: 0.532, mass_earth: 0.107,  temp_k: 208, method: 'Known', year: null },
-      { name: 'Jupiter', period_days: 4332.59,  radius_earth: 10.97, mass_earth: 317.83, temp_k: 163, method: 'Known', year: null },
-      { name: 'Saturn',  period_days: 10759.22, radius_earth: 9.14,  mass_earth: 95.16,  temp_k: 133, method: 'Known', year: null },
-      { name: 'Uranus',  period_days: 30688.5,  radius_earth: 3.98,  mass_earth: 14.54,  temp_k: 78,  method: 'Known', year: null },
-      { name: 'Neptune', period_days: 60182,    radius_earth: 3.86,  mass_earth: 17.15,  temp_k: 73,  method: 'Known', year: null },
+      // Full J2000 Keplerian elements from JPL Solar System Dynamics
+      // ssd.jpl.nasa.gov/planets/approx_pos.html
+      // Columns: sma_au, eccentricity, inclination, Omega_deg (ascending node),
+      //          omega_deg (arg of perihelion = long_peri - Omega), M0_deg (mean anomaly at J2000 = L - long_peri)
+      // Physical data: JPL phys_par.html + NASA Science temperatures
+      { name: 'Mercury', period_days: 87.9691,   radius_earth: 0.3829, mass_earth: 0.0553,  temp_k: 440, method: 'Known', year: null, sma_au: 0.38709927, eccentricity: 0.20563593, inclination: 7.00497902,  Omega_deg: 48.33076593,  omega_deg: 29.12703035,  M0_deg: 174.79252722 },
+      { name: 'Venus',   period_days: 224.701,   radius_earth: 0.9499, mass_earth: 0.8150,  temp_k: 737, method: 'Known', year: null, sma_au: 0.72333566, eccentricity: 0.00677672, inclination: 3.39467605,  Omega_deg: 76.67984255,  omega_deg: 54.92262463,  M0_deg: 50.37663232  },
+      { name: 'Earth',   period_days: 365.25636, radius_earth: 1.0000, mass_earth: 1.0000,  temp_k: 288, method: 'Known', year: null, sma_au: 1.00000261, eccentricity: 0.01671123, inclination:  0.00001531, Omega_deg:  0.0,         omega_deg: 102.93768193, M0_deg: 357.52488518 },
+      { name: 'Mars',    period_days: 686.971,   radius_earth: 0.5320, mass_earth: 0.1070,  temp_k: 208, method: 'Known', year: null, sma_au: 1.52371034, eccentricity: 0.09339410, inclination: 1.84969142,  Omega_deg: 49.55953891,  omega_deg: 286.50203646, M0_deg: 19.38800016  },
+      { name: 'Jupiter', period_days: 4332.589,  radius_earth: 10.973, mass_earth: 317.83,  temp_k: 163, method: 'Known', year: null, sma_au: 5.20288700, eccentricity: 0.04838624, inclination: 1.30439695,  Omega_deg: 100.47390909, omega_deg: 274.25703069, M0_deg: 20.02008730  },
+      { name: 'Saturn',  period_days: 10759.22,  radius_earth: 9.1402, mass_earth: 95.159,  temp_k: 133, method: 'Known', year: null, sma_au: 9.53667594, eccentricity: 0.05386179, inclination: 2.48599187,  Omega_deg: 113.66242448, omega_deg: 338.93645430, M0_deg: 317.02051793 },
+      { name: 'Uranus',  period_days: 30688.5,   radius_earth: 3.9829, mass_earth: 14.536,  temp_k: 78,  method: 'Known', year: null, sma_au: 19.18916464, eccentricity: 0.04725744, inclination: 0.77263783, Omega_deg: 74.01692503,  omega_deg: 96.93735127,  M0_deg: 142.26551718 },
+      { name: 'Neptune', period_days: 60182.0,   radius_earth: 3.8647, mass_earth: 17.147,  temp_k: 73,  method: 'Known', year: null, sma_au: 30.06992276, eccentricity: 0.00859048, inclination: 1.77004347,  Omega_deg: 131.78422574, omega_deg: 273.18479963, M0_deg: 259.90558541 },
     ]
   };
   planetsByHip['Sol'] = solSystem;
@@ -1106,8 +1257,7 @@ async function init() {
 
   // Build set of star IDs that have planet data (for filter highlight)
   for (const star of [...stars, { id: 'sol', name: 'Sol', hip: null, dist: 0 }]) {
-    const hipKey = star.hip ? String(star.hip).trim() : null;
-    if ((hipKey && planetsByHip[hipKey]) || (star.name && planetsByHip[star.name])) {
+    if (findSystem(star)) {
       planetHostIds.add(star.id);
     }
   }

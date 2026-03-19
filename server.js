@@ -30,7 +30,7 @@ function cacheHeaders(cacheFile, res) {
   }
 }
 
-const STARS_CACHE = path.join(__dirname, 'data', 'hygdata_1000ly_v3.json');
+const STARS_CACHE = path.join(__dirname, 'data', 'hygdata_1000ly_v5.json');
 
 app.get('/api/stars', async (req, res) => {
   try {

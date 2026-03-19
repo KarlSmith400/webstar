@@ -4,6 +4,75 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.18.0] - 2026-03-19
+
+### Changed
+- **Constellation lines rebuilt from Stellarium HIP data** - replaced hand-authored name-based line data with complete HIP-pair data from Stellarium's western sky culture (`constellationship.fab`); all 88 constellations now fully drawn with accurate multi-segment outlines (e.g. Pisces goes from 4 segments to 19, both fish loops complete)
+- **Constellation lookup switched to HIP numbers** - `buildConstellationLines` now indexes stars by Hipparcos catalog number rather than IAU proper name; stars without proper names (the majority of constellation outline stars) are now correctly resolved
+- **All 693 constellation stars whitelisted by HIP** - `data/stars.js` now uses a HIP-number whitelist instead of a proper-name whitelist, guaranteeing every star referenced in any constellation line is present in the cache regardless of distance or whether it has a proper name; 33 additional stars captured (78,846 total, up from 78,813)
+- Star cache bumped to `hygdata_1000ly_v5.json`
+
+---
+
+## [0.17.0] - 2026-03-19
+
+### Added
+- **Debris belts and rings** - known asteroid belts, Kuiper belts, and debris disks rendered as semi-transparent annular rings in the system view; Sol shows Asteroid Belt (2.2-3.2 AU) and Kuiper Belt (30-55 AU); six other well-documented systems show published disk data: Epsilon Eridani (inner belt + outer Kuiper analog), Beta Pictoris (near-edge-on disk at 87 deg, 50-450 AU), Tau Ceti (dense debris disk), Fomalhaut (narrow cold ring at 133-158 AU, 24 deg inclined), Vega (warm inner dust + cold outer ring); belt names and AU ranges shown in system panel
+- **Bayer designation search** - star search now matches against Bayer+constellation (e.g. "eps Eri", "bet Pic", "tau Cet") in addition to IAU proper names; Greek letter abbreviations expand so typing "epsilon" finds all eps-X stars; results display both proper name and Bayer designation where available
+
+### Fixed
+- Planet host lookup now also tries Bayer+constellation as a hostname key, fixing stars whose NASA archive hostname matches their Bayer designation (e.g. tau Cet, bet Pic, eps Eri) but who have no IAU proper name stored in HYG - these stars now correctly show the View System Map button and amber planet-host highlight
+- Canvas did not resize correctly on device orientation change - synchronous resize retained for desktop; 300 ms delayed resize added for `orientationchange` to let iOS viewport dimensions settle before updating renderer
+- Info panel closed immediately after opening on touch devices due to synthetic mouse events firing after touchend; `hideInfo` now ignores calls made within 150 ms of `showInfo`, and suppresses calls made during or within 800 ms of an orientation change
+
+## [0.16.0] - 2026-03-19
+
+### Added
+- **View System Map button** - appears in the info panel whenever a planet-host star is selected; provides a tap-friendly entry into the system view on mobile where double-tap is blocked by the info panel
+- **Spectral colour mode toggle** - button in the spectral legend switches between True (photometric, realistic blackbody colours) and Enhanced (saturated, visually distinct colours for easy spectral-type identification); legend dots update to match
+- **Scale note** - small label in the system panel notes that orbital distances are scaled for visibility
+- **karlsmith.design credit** - added to the system map panel alongside the scale note
+
+### Fixed
+- Star labels (`.star-label`) were not hidden when entering the system view - added to `body.sys-active` CSS rule
+- Planet spheres were too small to see clearly at normal zoom; increased minimum radius from 0.07 to 0.18 display units
+- Star glow sprite was oversized (scale 6), covering Mercury and Venus orbits entirely; reduced to 2.5
+- Inclination sign mismatch between orbit ring rotation and planet position formula corrected
+
+---
+
+## [0.15.0] - 2026-03-19
+
+### Changed
+- **Full 6-element Keplerian mechanics** - replaced simplified inclination-rotation hack with proper `keplerToWorld()` transform applying all three rotations in sequence: argument of periapsis (ω), inclination (i), longitude of ascending node (Ω); orbit rings and planet positions now use identical transformation so planets sit exactly on their rings
+- **Sol planet data upgraded to JPL J2000 precision** - all 8 planets now carry Ω, ω, M₀ from JPL Solar System Dynamics approx_pos table; periods and physical parameters updated to match current JPL values
+- **Epoch-correct starting positions** - `simTime` initialised to current days from J2000 (2000-Jan-1.5 UTC); Sol system opens showing real planetary positions for today's date
+- **NASA orbital data expanded** - `pl_orblper` (argument of periastron) and `pl_orbtper` (time of periastron, BJD) added to archive query; periastron time used to set correct starting phase for exoplanets where available
+- **Newton-Raphson precision tightened** - tolerance 1e-10 → 1e-12, iterations 50 → 100
+
+---
+
+## [0.14.0] - 2026-03-19
+
+### Added
+- **Solar system view** - double-click any planet-host star (or Sol) to enter a live 3D system view; animated orbits use real Kepler mechanics (Newton-Raphson eccentric anomaly solver)
+- **Habitable zone ring** - green shaded band computed from Kopparapu et al. 2013 formula (0.95*sqrt(L) to 1.37*sqrt(L) AU), scales with star luminosity
+- **Planet meshes** - colour-coded by equilibrium temperature (lava/hot/warm/habitable/cold/icy); radius scaled by Earth radii
+- **Orbit rings** - drawn by sampling eccentric anomaly for even visual spacing; eccentricity and inclination from NASA data where available
+- **Planet labels** - HTML overlay labels with data-quality tags: "Derived (Kepler III)" when semi-major axis is calculated from period and star mass, "e=0 assumed" when eccentricity is not in the archive
+- **Planet detail panel** - click a planet to see full data: orbital period, semi-major axis, eccentricity, inclination, radius, mass, equilibrium temperature, discovery method and year
+- **Time controls** - 1d/s / 10d/s / 100d/s / 1yr/s speed buttons + Pause; default 10 days per second
+- **Star glow sprite** - radial gradient sprite colour-matched to spectral type (O blue through M orange)
+- **NASA orbital data** - `pl_orbsmax`, `pl_orbeccen`, `pl_orbincl` added to NASA Exoplanet Archive query; planets cache refreshed
+- **Sol planet orbital elements** - full JPL data (sma_au, eccentricity, inclination) added to all 8 Sol planets
+- **Back to Star Map** - button and Escape key return to the star map and reset camera
+
+### Fixed
+- Selected star label and marker ring from the star map no longer show through when the system view is active
+- Star map mouse/keyboard events blocked while system view is open
+
+---
+
 ## [0.13.0] - 2026-03-19
 
 ### Added

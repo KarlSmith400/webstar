@@ -7,7 +7,7 @@ const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // NASA Exoplanet Archive — use pscomppars (one row per planet, best values)
 const NASA_URL = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=' +
   encodeURIComponent(
-    'SELECT pl_name,hostname,hip_name,sy_dist,pl_orbper,pl_rade,pl_bmasse,pl_eqt,discoverymethod,disc_year ' +
+    'SELECT pl_name,hostname,hip_name,sy_dist,pl_orbper,pl_rade,pl_bmasse,pl_eqt,discoverymethod,disc_year,pl_orbsmax,pl_orbeccen,pl_orbincl,pl_orblper,pl_orbtper ' +
     'FROM pscomppars ' +
     'WHERE pl_controv_flag=0'
   ) + '&format=json';
@@ -49,7 +49,12 @@ async function getPlanets() {
       mass_earth: p.pl_bmasse,
       temp_k: p.pl_eqt,
       method: p.discoverymethod,
-      year: p.disc_year
+      year: p.disc_year,
+      sma_au: p.pl_orbsmax != null ? p.pl_orbsmax : null,
+      eccentricity: p.pl_orbeccen != null ? p.pl_orbeccen : null,
+      inclination: p.pl_orbincl != null ? p.pl_orbincl : null,
+      omega_deg: p.pl_orblper != null ? p.pl_orblper : null,
+      t_peri_bjd: p.pl_orbtper != null ? p.pl_orbtper : null,
     });
   }
 

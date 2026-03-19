@@ -1,7 +1,7 @@
 node_modules/
 
 # Auto-generated data caches — regenerated on first server start
-data/hygdata_1000ly_v3.json
+data/hygdata_1000ly_*.json
 data/planets.json
 
 # OS

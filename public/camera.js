@@ -72,8 +72,11 @@ export function updateCamera() {
 }
 
 // --- Resize ---
-window.addEventListener('resize', () => {
+function onResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+}
+window.addEventListener('resize', onResize);
+// orientationchange fires before innerWidth/Height update on iOS — delay to let them settle
+window.addEventListener('orientationchange', () => setTimeout(onResize, 300));
