@@ -1217,11 +1217,18 @@ function updateNebulaLabels() {
 }
 
 // --- Init ---
+function setLoadStatus(msg) {
+  const el = document.getElementById('loading-status');
+  if (el) el.textContent = msg;
+}
+
 async function init() {
+  setLoadStatus('Loading star catalogue...');
   const [starsRes, planetsRes] = await Promise.all([
     fetch('/api/stars'),
     fetch('/api/planets')
   ]);
+  setLoadStatus('Parsing data...');
   const stars = await starsRes.json();
   const planetsArr = await planetsRes.json();
   // Index planets by HIP number and hostname for fast lookup
@@ -1265,13 +1272,20 @@ async function init() {
   // Add Sol into the star field as a regular point
   const solData = [{ id: 'sol', name: 'Sol', x: 0, y: 0, z: 0, mag: -26.74, absmag: 4.83, lum: 1.0, dist: 0, spect: 'G2V' }];
   const allStars = [...solData, ...stars];
+  setLoadStatus('Mapping ' + allStars.length.toLocaleString() + ' stars...');
   buildStarField(allStars);
   buildSpatialGrid(allStars);
   buildBinaryLinks(allStars); // must run before addLabels so companionCount is populated
   addLabels(allStars);
+  setLoadStatus('Drawing constellations...');
   buildConstellationLines(allStars);
   buildNebulae();
   animate();
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 900);
+  }
 }
 
 init();
