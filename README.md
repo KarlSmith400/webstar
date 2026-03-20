@@ -19,7 +19,7 @@ Renders a live 3D star map centred on Sol, pulling from the HYG astronomical dat
 HYG Star Data v41 (GitHub)          NASA Exoplanet Archive (TAP API)
         ↓                                        ↓
 Express API -fetches, filters,         fetches pscomppars table,
-caches as hygdata_1000ly_v3.json        caches as planets.json
+caches as hygdata_1000ly_v5.json        caches as planets.json
         ↓                                        ↓
 /api/stars endpoint                  /api/planets endpoint
         ↓                                        ↓
@@ -46,7 +46,7 @@ WebStar/
 ├── data/
 │   ├── stars.js                 ← HYG fetch, filter, cache logic
 │   ├── planets.js               ← NASA Exoplanet Archive fetch + cache logic
-│   ├── hygdata_1000ly_v3.json   ← Star cache, 1000 LY radius (git-ignored)
+│   ├── hygdata_1000ly_v5.json   ← Star cache, 1000 LY radius (git-ignored)
 │   └── planets.json             ← Planet cache (git-ignored)
 ├── public/
 │   ├── index.html               ← Front end entry point + UI panels
@@ -74,15 +74,17 @@ WebStar/
 - **Route finder** -Shift+click two stars for shortest BFS jump path
 - **Constellation lines** -88 constellations with complete outlines from Stellarium's western sky culture HIP-pair data; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
 - **Binary companion links** -amber lines between confirmed close companion pairs (< 0.1 LY, Gliese catalog stars)
-- **Screenshot** -📷 button saves current view as PNG
-- **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls; hint displayed bottom-right
+- **Mobile-first universal UI** -bottom navigation bar (Sky / Planets / Jump / More) on every device; Ko-fi support button pinned to the right of the nav bar; top bar with WEBSTAR title; info panel and jump planner open as drag-to-resize bottom sheets with three snap heights; search bar always visible below the top bar
+- **Spectral key drawer** -right-side pull-out tab reveals the spectral type legend and colour mode toggle without consuming fixed screen space
+- **Screenshot** -saves current view as PNG (via More menu or keyboard shortcut)
+- **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls
 - **Hover tooltip** -named star label appears on mouseover
-- **Distance ruler** -click Ruler then two stars to measure LY distance; chains from last point
+- **Distance ruler** -activate via More then tap two stars to measure LY distance; chains from last point
 - **Exoplanet type sub-filter** -when planet host filter is active, refine by planet type: terrestrial / super-Earth / Neptune-like / gas giant
 - **Nebulae & clusters** -12 deep-sky objects (Orion Nebula, Pleiades, Hyades, Crab Nebula, Eagle Nebula, and more) at correct 3D positions with labels
-- **Touch support** -tap to select stars on mobile
+- **Touch support** -tap to select stars on mobile; info panel drag handle to resize; View System Map button for touch entry into system view
 - **Solar system view** -double-click any planet-host star (or tap then press View System Map on mobile) to enter a live 3D system view; full 6-element Keplerian mechanics (a, e, i, Ω, ω, M₀) with Newton-Raphson solver; Sol opens at real current planetary positions (epoch J2000); habitable zone ring (Kopparapu 2013); planet meshes colour-coded by equilibrium temperature; orbit rings with correct 3D orientation; time controls (1d/s to 1yr/s + pause); planet detail panel on click; data-quality tags distinguish observed vs derived orbital elements; orbital distances scaled for visibility
-- **Spectral colour modes** -toggle between True (photometric blackbody colours, realistic) and Enhanced (saturated, high-contrast) via the spectral legend
+- **Spectral colour modes** -toggle between True (photometric blackbody colours, realistic) and Enhanced (saturated, high-contrast) via the spectral key drawer
 - **Debris belts and rings** -known asteroid belts, Kuiper belts, and debris disks rendered in the system view; Sol shows Asteroid Belt and Kuiper Belt; six further systems show published disk data: Epsilon Eridani, Beta Pictoris (near-edge-on at 87 deg), Tau Ceti, Fomalhaut, Vega; belt extents listed in the system panel
 
 ## Data Sources & Licensing
@@ -147,7 +149,7 @@ WebStar is a **data visualisation tool** -it does not sell or redistribute raw d
 
 https://webstar-r7fc.onrender.com
 
-Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up. Subsequent visits are instant.
+Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up while the server fetches and caches the star catalogue - a loading screen with live status messages covers this. Subsequent visits are instant.
 
 ## Planned
 

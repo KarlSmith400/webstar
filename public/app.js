@@ -3,6 +3,7 @@ import { CONSTELLATIONS } from './constellations.js';
 import { camera, renderer, controls, flyToPosition, toScreenPx, lockToEarth, freeLook, resetCamera, updateCamera } from './camera.js';
 import * as SolarSystem from './solar-system.js';
 
+
 // --- Scene setup ---
 const scene = new THREE.Scene();
 
@@ -456,7 +457,13 @@ function showInfo(star) {
     planetSection.style.display = 'none';
   }
 
-  document.getElementById('info-panel').style.display = 'block';
+  const panel = document.getElementById('info-panel');
+  panel.style.display = 'flex';
+  if (true) {
+    panel.style.height = Math.round(window.innerHeight * 0.42) + 'px';
+    panel.style.maxHeight = 'none';
+    panel.style.overflowY = 'auto';
+  }
 }
 
 function hideInfo() {
@@ -598,6 +605,7 @@ document.getElementById('planet-filter').addEventListener('click', () => {
   document.getElementById('planet-type-panel').style.display = planetFilterActive ? 'flex' : 'none';
   if (planetFilterActive) rebuildPlanetHostIds();
   updateStarColors();
+  document.getElementById('nav-planets')?.classList.toggle('active', planetFilterActive);
 });
 
 function updateStarColors() {
@@ -904,6 +912,7 @@ document.getElementById('constellation-toggle').addEventListener('click', () => 
   const btn = document.getElementById('constellation-toggle');
   btn.textContent = 'Constellations';
   btn.classList.toggle('active', constellationsVisible);
+  document.getElementById('nav-sky')?.classList.toggle('active', constellationsVisible);
 
   if (constellationsVisible) {
     const dir = camera.position.clone().normalize();
@@ -1289,3 +1298,121 @@ async function init() {
 }
 
 init();
+
+// --- Info panel drag-to-resize (mobile bottom sheet) ---
+(function () {
+  const panel  = document.getElementById('info-panel');
+  const handle = panel.querySelector('.panel-drag-handle');
+  if (!handle) return;
+
+  const SNAPS = () => [
+    100,
+    Math.round(window.innerHeight * 0.42),
+    Math.round(window.innerHeight * 0.78),
+  ];
+
+  let startY = 0, startH = 0, dragging = false;
+
+  function nearest(h) {
+    return SNAPS().reduce((a, b) => Math.abs(b - h) < Math.abs(a - h) ? b : a);
+  }
+
+  function onStart(e) {
+    // drag-to-resize active on all devices
+    dragging = true;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    startH = panel.offsetHeight;
+    panel.style.transition = 'none';
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend',  onEnd);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onEnd);
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const y     = e.touches ? e.touches[0].clientY : e.clientY;
+    const delta = startY - y;
+    const max   = window.innerHeight * 0.85 - 60;
+    panel.style.height = Math.min(max, Math.max(80, startH + delta)) + 'px';
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend',  onEnd);
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup',   onEnd);
+    panel.style.transition = 'height 0.25s ease';
+    panel.style.height = nearest(panel.offsetHeight) + 'px';
+  }
+
+  handle.addEventListener('touchstart', onStart, { passive: true });
+  handle.addEventListener('mousedown',  onStart);
+}());
+
+// --- Spectral drawer ---
+(function () {
+  const drawer = document.getElementById('spectral-drawer');
+  const tab    = document.getElementById('spectral-tab');
+  if (!drawer || !tab) return;
+  tab.addEventListener('click', () => drawer.classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    if (drawer.classList.contains('open') && !drawer.contains(e.target)) {
+      drawer.classList.remove('open');
+    }
+  }, true);
+}());
+
+// --- Mobile bottom navigation ---
+(function () {
+  function closeMore() {
+    document.getElementById('more-panel').style.display = 'none';
+    document.getElementById('nav-more').classList.remove('active');
+  }
+
+  // Sky — proxy to constellation toggle
+  document.getElementById('nav-sky')?.addEventListener('click', () => {
+    document.getElementById('constellation-toggle').click();
+  });
+
+  // Planets — proxy to planet filter
+  document.getElementById('nav-planets')?.addEventListener('click', () => {
+    document.getElementById('planet-filter').click();
+  });
+
+  // Jump — toggle jump panel as bottom sheet
+  document.getElementById('nav-jump')?.addEventListener('click', () => {
+    const panel = document.getElementById('jump-panel');
+    const btn   = document.getElementById('nav-jump');
+    const open  = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    btn.classList.toggle('active', !open);
+    if (!open) closeMore();
+  });
+
+  // More panel
+  document.getElementById('nav-more')?.addEventListener('click', () => {
+    const panel = document.getElementById('more-panel');
+    const btn   = document.getElementById('nav-more');
+    const open  = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    btn.classList.toggle('active', !open);
+  });
+
+  // More panel action buttons
+  document.getElementById('more-reset')?.addEventListener('click', () => {
+    resetView(); closeMore();
+  });
+  document.getElementById('more-screenshot')?.addEventListener('click', () => {
+    document.getElementById('screenshot-btn').click(); closeMore();
+  });
+  document.getElementById('more-ruler')?.addEventListener('click', () => {
+    document.getElementById('ruler-btn').click(); closeMore();
+  });
+  document.getElementById('more-colors')?.addEventListener('click', () => {
+    document.getElementById('color-mode-btn').click(); closeMore();
+  });
+}());

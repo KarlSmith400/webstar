@@ -4,6 +4,54 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.23.0] - 2026-03-20
+
+### Added
+- **Ko-fi button in nav bar** - Support link sits to the right of the main nav buttons, separated by a thin divider; amber colour distinguishes it from functional nav items
+
+### Fixed
+- Drag handle hit area expanded to full panel width with 10 px top/bottom padding - visual pill unchanged, but the grab target is much easier to hit on touch
+
+---
+
+## [0.22.0] - 2026-03-20
+
+### Added
+- **Spectral key drawer** - fixed interaction regression where the entire drawer (including the tab) was translated off-screen when closed; tab now stays fixed at right edge and only the legend panel slides in/out
+
+### Fixed
+- Info panel drag handle now stays pinned at the top regardless of scroll position - panel content scrolls inside a flex child while the handle stays outside the scroll area
+- Thin styled scrollbar (3 px, translucent thumb) replaces the default browser scrollbar in the info panel
+- Jump planner, info panel, route panel, more panel, and planet type filter all constrained to 90% width (5% side margins) so they do not stretch edge-to-edge on wide screens
+- More panel action buttons reduced in height; panel gains side borders for a cleaner floating appearance
+- Solar system back button no longer obscured - sys-panel uses `max-width: 94vw` instead of forced `width: 94%` so it auto-sizes on desktop
+
+---
+
+## [0.21.0] - 2026-03-20
+
+### Changed
+- **Mobile-first universal UI** - bottom navigation bar (Sky / Planets / Jump / More) replaces all desktop toolbar buttons on every device; top bar with WEBSTAR title; all panels anchored as bottom sheets above the nav bar with drag-to-resize handle and snap points (collapsed / mid / expanded); search bar always visible below the top bar; eliminates separate desktop vs mobile layouts
+
+### Added
+- **Spectral key drawer** - right-side pull-out tab exposes the spectral type legend and star colour mode toggle on any screen size without occupying fixed screen space; tap the vertical SPECTRAL KEY tab to open/close
+- **Data sources in More panel** - star data, exoplanet, solar system, and constellation attributions now accessible via the More menu on all devices
+- **Ko-fi and portfolio links** in More panel footer
+
+### Fixed
+- More panel footer link colour was nearly invisible (`#445` near-black) - corrected to readable `#889`
+- Bottom nav buttons capped at 90 px wide and centred so they are not excessively stretched on large screens
+- Search tab removed from bottom nav (redundant with always-visible search bar)
+
+---
+
+## [0.20.0] - 2026-03-20
+
+### Added
+- **Loading overlay** - full-screen splash shown on cold start while star catalogue fetches; live status messages update through each stage (connecting, loading, parsing, mapping stars, drawing constellations); fades out smoothly once the scene is ready; prevents the broken blank-canvas appearance on Render free-tier spin-up
+
+---
+
 ## [0.19.0] - 2026-03-19
 
 ### Added
