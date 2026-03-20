@@ -55,8 +55,9 @@ function buildStarField(stars) {
     positions[i * 3 + 2] = s.z;
 
     color.setHex(spectToHex(s.spect));
-    // Boost brightness based on magnitude
-    const brightness = Math.min(1, (7 - s.mag) / 5);
+    // Pogson scale: each magnitude step = 10^0.4 ≈ 2.512× brightness difference
+    // Normalised so mag 0 (Vega) = 1.0; floor at 0.05 so dim stars remain visible
+    const brightness = Math.max(0.05, Math.min(1.0, Math.pow(10, -0.4 * s.mag / 2.5)));
     colors[i * 3]     = color.r * brightness;
     colors[i * 3 + 1] = color.g * brightness;
     colors[i * 3 + 2] = color.b * brightness;
@@ -66,10 +67,23 @@ function buildStarField(stars) {
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+  // Soft circular sprite so stars render as round glowing dots
+  const starCanvas = document.createElement('canvas');
+  starCanvas.width = starCanvas.height = 32;
+  const ctx = starCanvas.getContext('2d');
+  const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0,   'rgba(255,255,255,1)');
+  grad.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+  grad.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 32, 32);
+  const starTex = new THREE.CanvasTexture(starCanvas);
+
   const mat = new THREE.PointsMaterial({
     vertexColors: true,
     sizeAttenuation: false,
     size: 3,
+    map: starTex,
     transparent: true,
     opacity: 1.0,
     blending: THREE.AdditiveBlending,
@@ -222,13 +236,12 @@ function updateLabels() {
 // --- Click detection ---
 let selectedMarker = null;
 let dragMoved = false;
+let mouseDown = false;
 const HIT_RADIUS_PX = 18; // pixels
 
-renderer.domElement.addEventListener('mousedown', () => { dragMoved = false; });
-renderer.domElement.addEventListener('mousemove', () => { dragMoved = true; });
-renderer.domElement.addEventListener('mouseup', (e) => {
-  if (!dragMoved) onMouseClick(e);
-});
+renderer.domElement.addEventListener('mousedown', () => { dragMoved = false; mouseDown = true; });
+renderer.domElement.addEventListener('mouseup',   (e) => { mouseDown = false; if (!dragMoved) onMouseClick(e); });
+renderer.domElement.addEventListener('mousemove', () => { if (mouseDown) dragMoved = true; });
 
 function onMouseClick(e) {
   if (SolarSystem.isActive()) return;
@@ -242,9 +255,9 @@ function onMouseClick(e) {
     const d = Math.hypot(mx - solScreen.x, my - solScreen.y);
     if (d < HIT_RADIUS_PX) {
       if (rulerClick(solStar)) return;
+      if (jumpPlannerActive) { setJumpOrigin(solStar); return; }
       showInfo(solStar);
       removeMarker();
-      if (jumpPlannerActive) setJumpOrigin(solStar);
       return;
     }
   }
@@ -276,9 +289,9 @@ function onMouseClick(e) {
 
   if (closest) {
     if (rulerClick(closest)) return; // ruler mode intercepts click
+    if (jumpPlannerActive) { setJumpOrigin(closest); placeMarker(closest); return; }
     showInfo(closest);
     placeMarker(closest);
-    if (jumpPlannerActive) setJumpOrigin(closest);
 
     // Route finder: shift+click sets origin then destination
     if (e.shiftKey) {
@@ -457,6 +470,7 @@ function showInfo(star) {
     planetSection.style.display = 'none';
   }
 
+  if (window._navCloseJump) window._navCloseJump();
   const panel = document.getElementById('info-panel');
   panel.style.display = 'flex';
   if (true) {
@@ -595,6 +609,19 @@ document.getElementById('freelook-btn').addEventListener('click', () => {
   document.getElementById('freelook-btn').style.display = 'none';
 });
 
+function closePlanetFilter() {
+  if (!planetFilterActive) return;
+  planetFilterActive = false;
+  const btn = document.getElementById('planet-filter');
+  btn.style.background = 'rgba(255,255,255,0.1)';
+  btn.style.borderColor = 'rgba(255,255,255,0.2)';
+  btn.style.color = '#fff';
+  document.getElementById('planet-type-panel').style.display = 'none';
+  document.getElementById('nav-planets')?.classList.remove('active');
+  updateStarColors();
+}
+window._closePlanetFilter = closePlanetFilter;
+
 document.getElementById('planet-filter').addEventListener('click', () => {
   planetFilterActive = !planetFilterActive;
   const btn = document.getElementById('planet-filter');
@@ -603,7 +630,9 @@ document.getElementById('planet-filter').addEventListener('click', () => {
   btn.style.borderColor = planetFilterActive ? 'rgba(255,180,50,0.5)' : 'rgba(255,255,255,0.2)';
   btn.style.color = planetFilterActive ? '#fda' : '#fff';
   document.getElementById('planet-type-panel').style.display = planetFilterActive ? 'flex' : 'none';
-  if (planetFilterActive) rebuildPlanetHostIds();
+  if (planetFilterActive) {
+    rebuildPlanetHostIds();
+  }
   updateStarColors();
   document.getElementById('nav-planets')?.classList.toggle('active', planetFilterActive);
 });
@@ -885,7 +914,7 @@ function buildConstellationLines(stars) {
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-  const mat = new THREE.LineBasicMaterial({ color: 0x334466, transparent: true, opacity: 0.6 });
+  const mat = new THREE.LineBasicMaterial({ color: 0x5577bb, transparent: true, opacity: 0.85 });
   constellationLines = new THREE.LineSegments(geom, mat);
   constellationLines.visible = false;
   scene.add(constellationLines);
@@ -1048,13 +1077,7 @@ renderer.domElement.addEventListener('mousemove', e => {
     if (d < closestD) { closest = { name: 'Sol' }; closestD = d; }
   }
 
-  // Named stars always checked; planet hosts also checked when filter is active
-  const hoverPool = planetFilterActive
-    ? starDataArray // check all so planet hosts without names still show
-    : starDataArray.filter(s => s.name);
-
-  for (const star of hoverPool) {
-    if (!planetFilterActive && !star.name) continue;
+  for (const star of starDataArray) {
     const s = toScreenPx(new THREE.Vector3(star.x, star.y, star.z));
     if (s.behind) continue;
     const d = Math.hypot(mx - s.x, my - s.y);
@@ -1062,9 +1085,7 @@ renderer.domElement.addEventListener('mousemove', e => {
   }
 
   if (closest) {
-    const label = closest.name || closest.bayer
-      ? (closest.name || closest.bayer)
-      : (closest.hip ? `HIP ${closest.hip}` : 'Star');
+    const label = closest.name || closest.bayer || (closest.hip ? `HIP ${closest.hip}` : 'Star');
     tooltip.style.display = 'block';
     tooltip.style.left = (mx + 14) + 'px';
     tooltip.style.top  = (my - 8) + 'px';
@@ -1372,6 +1393,18 @@ init();
     document.getElementById('more-panel').style.display = 'none';
     document.getElementById('nav-more').classList.remove('active');
   }
+  function closeInfo() {
+    document.getElementById('info-panel').style.display = 'none';
+  }
+  function closeJump() {
+    document.getElementById('jump-panel').style.display = 'none';
+    document.getElementById('nav-jump').classList.remove('active');
+    if (jumpPlannerActive) document.getElementById('jump-toggle').click();
+  }
+
+  // Expose so showInfo / hideInfo can sync jump state
+  window._navCloseJump = closeJump;
+  window._navCloseInfo = closeInfo;
 
   // Sky — proxy to constellation toggle
   document.getElementById('nav-sky')?.addEventListener('click', () => {
@@ -1383,14 +1416,20 @@ init();
     document.getElementById('planet-filter').click();
   });
 
-  // Jump — toggle jump panel as bottom sheet
+  // Jump — toggle jump panel; auto-enable/disable planner with panel
   document.getElementById('nav-jump')?.addEventListener('click', () => {
     const panel = document.getElementById('jump-panel');
-    const btn   = document.getElementById('nav-jump');
+    const navBtn = document.getElementById('nav-jump');
     const open  = panel.style.display === 'block';
     panel.style.display = open ? 'none' : 'block';
-    btn.classList.toggle('active', !open);
-    if (!open) closeMore();
+    navBtn.classList.toggle('active', !open);
+    // auto-activate/deactivate the planner with the panel
+    if (!open) {
+      closeInfo(); closeMore(); if (window._closePlanetFilter) window._closePlanetFilter();
+      if (!jumpPlannerActive) document.getElementById('jump-toggle').click();
+    } else {
+      if (jumpPlannerActive) document.getElementById('jump-toggle').click();
+    }
   });
 
   // More panel

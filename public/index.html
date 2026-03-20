@@ -97,6 +97,11 @@
     #jump-panel label { font-size: 12px; color: #999; display: block; margin-bottom: 4px; }
     #jump-panel input[type=range] { width: 100%; margin-bottom: 2px; accent-color: #4af; }
     #jump-panel .val { font-size: 12px; color: #fff; margin-bottom: 10px; }
+    .slider-ticks { position: relative; height: 14px; margin-bottom: 2px; }
+    .slider-ticks span {
+      position: absolute; transform: translateX(-50%);
+      font-size: 9px; color: rgba(255,255,255,0.25); line-height: 1;
+    }
     #jump-panel button {
       width: 100%; padding: 7px; margin-top: 4px;
       background: rgba(68,170,255,0.15);
@@ -684,11 +689,27 @@
     <h3>JUMP PLANNER</h3>
     <label>Jump range (LY)</label>
     <input type="range" id="jump-range" min="1" max="15" value="10" step="0.5">
+    <div class="slider-ticks">
+      <span style="left:calc(0*(100% - 16px) + 8px)">1</span>
+      <span style="left:calc((4/14)*(100% - 16px) + 8px)">5</span>
+      <span style="left:calc((7/14)*(100% - 16px) + 8px)">8</span>
+      <span style="left:calc((9/14)*(100% - 16px) + 8px)">10</span>
+      <span style="left:calc((12/14)*(100% - 16px) + 8px)">13</span>
+      <span style="left:calc(1*(100% - 16px) + 8px)">15</span>
+    </div>
     <div class="val"><span id="jump-range-val">10</span> LY</div>
     <label>Max jumps</label>
     <input type="range" id="jump-hops" min="1" max="6" value="3" step="1">
+    <div class="slider-ticks">
+      <span style="left:calc(0*(100% - 16px) + 8px)">1</span>
+      <span style="left:calc((1/5)*(100% - 16px) + 8px)">2</span>
+      <span style="left:calc((2/5)*(100% - 16px) + 8px)">3</span>
+      <span style="left:calc((3/5)*(100% - 16px) + 8px)">4</span>
+      <span style="left:calc((4/5)*(100% - 16px) + 8px)">5</span>
+      <span style="left:calc(1*(100% - 16px) + 8px)">6</span>
+    </div>
     <div class="val"><span id="jump-hops-val">3</span> hops</div>
-    <button id="jump-toggle">Enable Jump Planner</button>
+    <button id="jump-toggle" style="display:none">Enable Jump Planner</button>
     <div id="jump-origin"></div>
     <div id="jump-counts"></div>
   </div>

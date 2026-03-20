@@ -69,7 +69,7 @@ WebStar/
 - **Double-click to fly** -smooth camera animation to any star
 - **Star search** -type a name or Bayer designation (e.g. "eps Eri", "beta Pic"); Greek letter expansion means "epsilon" finds all eps-X stars; results show both proper name and Bayer designation
 - **Labels** -brightest named stars always labelled; named stars within 5 LY always labelled regardless of apparent magnitude; companions stacked below primary
-- **Spectral colour coding** -O (blue) through M (orange-red)
+- **Spectral colour coding** -O (blue) through M (orange-red); star brightness uses Pogson's logarithmic magnitude scale so bright stars properly dominate; soft radial-gradient sprites replace hard square points
 - **Jump planner** -set jump range (LY) and max hops, visualises reachable network from any star with hop-count badge and star highlighting; spatial grid index keeps BFS fast at 1000 LY scale
 - **Route finder** -Shift+click two stars for shortest BFS jump path
 - **Constellation lines** -88 constellations with complete outlines from Stellarium's western sky culture HIP-pair data; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
@@ -78,7 +78,7 @@ WebStar/
 - **Spectral key drawer** -right-side pull-out tab reveals the spectral type legend and colour mode toggle without consuming fixed screen space
 - **Screenshot** -saves current view as PNG (via More menu or keyboard shortcut)
 - **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls
-- **Hover tooltip** -named star label appears on mouseover
+- **Hover tooltip** -any star shows its name, Bayer designation, or HIP number on mouseover before clicking; cursor changes to pointer to confirm target
 - **Distance ruler** -activate via More then tap two stars to measure LY distance; chains from last point
 - **Exoplanet type sub-filter** -when planet host filter is active, refine by planet type: terrestrial / super-Earth / Neptune-like / gas giant
 - **Nebulae & clusters** -12 deep-sky objects (Orion Nebula, Pleiades, Hyades, Crab Nebula, Eagle Nebula, and more) at correct 3D positions with labels

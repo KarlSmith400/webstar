@@ -4,6 +4,22 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.24.0] - 2026-03-20
+
+### Added
+- **Hover tooltip on all stars** - moving the cursor near any star shows its name, Bayer designation, or HIP number before clicking; cursor changes to pointer to confirm the target; previously only named stars triggered a tooltip
+- **Soft star sprites** - stars rendered with a radial-gradient canvas texture so they appear as smooth glowing discs instead of hard square pixels; especially noticeable on high-DPI mobile screens
+- **Accurate photometric brightness** - star luminance now uses Pogson's logarithmic magnitude scale (each magnitude step = 2.512× brightness); Sirius and Canopus properly dominate while dim background stars fade to subtle points; old linear formula made mag 0 and mag 3 stars look nearly identical
+
+### Fixed
+- Constellation lines brightness increased (colour `0x334466` → `0x5577bb`, opacity 0.6 → 0.85) so they are clearly visible on OLED mobile displays
+- Hover tooltip never showed because `dragMoved` was set on every `mousemove` regardless of mouse button state; now only set while button is held, so tooltip fires freely during normal movement
+- Jump planner panel / info panel / planet filter no longer fight for the same screen space - opening one closes any conflicting panel; clicking a star while jump planner is active sets the origin without dismissing the planner
+- Jump planner auto-enables when the nav panel opens and disables when it closes; internal Enable button hidden as redundant
+- Slider tick marks added to jump range and max hops sliders
+
+---
+
 ## [0.23.0] - 2026-03-20
 
 ### Added
