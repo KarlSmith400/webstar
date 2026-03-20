@@ -233,6 +233,10 @@
       border-bottom: 1px solid rgba(255,255,255,0.06); z-index: 100;
     }
     #top-bar-title { font-size: 12px; font-weight: 300; letter-spacing: 0.35em; color: rgba(255,255,255,0.4); }
+    #top-bar-brand { margin-left: auto; display: flex; align-items: center; gap: 8px; text-decoration: none; opacity: 0.75; transition: opacity 0.2s; }
+    #top-bar-brand:hover { opacity: 1; }
+    #top-bar-brand img { width: 28px; height: 28px; display: block; }
+    #top-bar-brand span { font-family: 'Courier New', monospace; font-size: 11px; color: #39FF14; letter-spacing: 0.05em; text-shadow: 0 0 8px rgba(57,255,20,0.6); }
 
     /* ---- Bottom navigation ---- */
     #bottom-nav {
@@ -529,6 +533,10 @@
 <body>
   <div id="top-bar">
     <span id="top-bar-title">WEBSTAR</span>
+    <a id="top-bar-brand" href="https://karlsmith.design" target="_blank" rel="noopener">
+      <img src="ks-logo.svg" alt="Karl Smith Web Design">
+      <span>karlsmith.design</span>
+    </a>
   </div>
 
   <div id="loading-overlay">
@@ -593,6 +601,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
         <span>Star Colors</span>
       </button>
+      <button class="more-action-btn" id="more-nebulae">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10"/><path d="M12 6c-1.5 2-2 4-2 6s.5 4 2 6"/><path d="M6 12c2-1.5 4-2 6-2s4 .5 6 2"/></svg>
+        <span>Nebulae</span>
+      </button>
     </div>
     <div class="more-sources">
       <div class="more-sources-title">Data Sources</div>
@@ -603,7 +615,6 @@
     </div>
     <div class="more-footer">
       <a href="https://ko-fi.com/karlsmith400" target="_blank" rel="noopener">☕ Support WebStar</a>
-      <a href="https://karlsmith.design" target="_blank" rel="noopener">karlsmith.design</a>
     </div>
   </div>
 

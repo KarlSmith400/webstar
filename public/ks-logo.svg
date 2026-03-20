@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Karl Smith Web Design">
+  <defs>
+    <!-- CRT phosphor glow -->
+    <filter id="glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur-wide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur-tight"/>
+      <feMerge>
+        <feMergeNode in="blur-wide"/>
+        <feMergeNode in="blur-tight"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- CRT scanlines -->
+    <pattern id="scanlines" x="0" y="0" width="200" height="3" patternUnits="userSpaceOnUse">
+      <rect y="0" width="200" height="1.5" fill="black" fill-opacity="0.18"/>
+    </pattern>
+
+    <!-- Vignette -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="45%" stop-color="black" stop-opacity="0"/>
+      <stop offset="100%" stop-color="black" stop-opacity="0.8"/>
+    </radialGradient>
+  </defs>
+
+  <style>
+    @keyframes appear {
+      to { opacity: 1; }
+    }
+    @keyframes cursorMove {
+      0%,    33.2% { transform: translateX(0px);   }
+      33.3%, 70.7% { transform: translateX(52px);  }
+      70.8%, 100%  { transform: translateX(104px); }
+    }
+    @keyframes blink {
+      0%,  49% { opacity: 1; }
+      50%, 99% { opacity: 0; }
+    }
+    .char-k { opacity: 0; animation: appear 0.05s 0.4s linear forwards; }
+    .char-s { opacity: 0; animation: appear 0.05s 0.85s linear forwards; }
+    .cursor {
+      animation:
+        cursorMove 1.2s linear forwards,
+        blink 0.8s 1.2s linear infinite;
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="200" height="200" fill="#0D0D0D"/>
+
+  <!-- Content with CRT glow -->
+  <g filter="url(#glow)">
+    <rect x="8" y="8" width="184" height="184"
+          fill="none" stroke="#39FF14" stroke-width="3.5"/>
+    <text class="char-k"
+          x="42" y="130"
+          font-family="'Courier New', Courier, monospace"
+          font-weight="bold" font-size="86" fill="#39FF14">K</text>
+    <text class="char-s"
+          x="94" y="130"
+          font-family="'Courier New', Courier, monospace"
+          font-weight="bold" font-size="86" fill="#39FF14">S</text>
+    <rect class="cursor"
+          x="42" y="70" width="12" height="60" fill="#39FF14"/>
+  </g>
+
+  <!-- CRT scanlines overlay -->
+  <rect width="200" height="200" fill="url(#scanlines)"/>
+
+  <!-- Vignette overlay -->
+  <rect width="200" height="200" fill="url(#vignette)"/>
+
+</svg>

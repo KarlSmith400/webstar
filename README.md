@@ -74,14 +74,14 @@ WebStar/
 - **Route finder** -Shift+click two stars for shortest BFS jump path
 - **Constellation lines** -88 constellations with complete outlines from Stellarium's western sky culture HIP-pair data; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
 - **Binary companion links** -amber lines between confirmed close companion pairs (< 0.1 LY, Gliese catalog stars)
-- **Mobile-first universal UI** -bottom navigation bar (Sky / Planets / Jump / More) on every device; Ko-fi support button pinned to the right of the nav bar; top bar with WEBSTAR title; info panel and jump planner open as drag-to-resize bottom sheets with three snap heights; search bar always visible below the top bar
+- **Mobile-first universal UI** -bottom navigation bar (Sky / Planets / Jump / More) on every device; Ko-fi support button pinned to the right of the nav bar; top bar with WEBSTAR title and KS branding link; info panel and jump planner open as drag-to-resize bottom sheets with three snap heights; search bar always visible below the top bar
 - **Spectral key drawer** -right-side pull-out tab reveals the spectral type legend and colour mode toggle without consuming fixed screen space
 - **Screenshot** -saves current view as PNG (via More menu or keyboard shortcut)
 - **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls
 - **Hover tooltip** -any star shows its name, Bayer designation, or HIP number on mouseover before clicking; cursor changes to pointer to confirm target
 - **Distance ruler** -activate via More then tap two stars to measure LY distance; chains from last point
 - **Exoplanet type sub-filter** -when planet host filter is active, refine by planet type: terrestrial / super-Earth / Neptune-like / gas giant
-- **Nebulae & clusters** -12 deep-sky objects (Orion Nebula, Pleiades, Hyades, Crab Nebula, Eagle Nebula, and more) at correct 3D positions with labels
+- **Nebulae & clusters** -30 deep-sky objects at correct 3D positions: emission nebulae (Orion, Horsehead, Lagoon, Eagle, Eta Carinae, and more), planetary nebulae (Ring, Dumbbell, Cat's Eye), supernova remnants (Crab, Veil), and open clusters (Pleiades, Hyades, Beehive); type-coded wireframe markers; toggle via More panel
 - **Touch support** -tap to select stars on mobile; info panel drag handle to resize; View System Map button for touch entry into system view
 - **Solar system view** -double-click any planet-host star (or tap then press View System Map on mobile) to enter a live 3D system view; full 6-element Keplerian mechanics (a, e, i, Ω, ω, M₀) with Newton-Raphson solver; Sol opens at real current planetary positions (epoch J2000); habitable zone ring (Kopparapu 2013); planet meshes colour-coded by equilibrium temperature; orbit rings with correct 3D orientation; time controls (1d/s to 1yr/s + pause); planet detail panel on click; data-quality tags distinguish observed vs derived orbital elements; orbital distances scaled for visibility
 - **Spectral colour modes** -toggle between True (photometric blackbody colours, realistic) and Enhanced (saturated, high-contrast) via the spectral key drawer

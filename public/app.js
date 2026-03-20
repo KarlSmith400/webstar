@@ -1199,28 +1199,57 @@ function raDecDistToXYZ(raDeg, decDeg, distPc) {
 }
 
 const NEBULAE = [
-  { name: 'Orion Nebula',    ra: 83.82,  dec: -5.39,  dist: 412,  type: 'Nebula'  },
-  { name: 'Pleiades',        ra: 56.75,  dec: 24.11,  dist: 136,  type: 'Cluster' },
-  { name: 'Hyades',          ra: 66.75,  dec: 15.87,  dist: 46,   type: 'Cluster' },
-  { name: 'Helix Nebula',    ra: 337.41, dec: -20.84, dist: 200,  type: 'Nebula'  },
-  { name: 'Beehive (M44)',   ra: 130.05, dec: 19.98,  dist: 187,  type: 'Cluster' },
-  { name: 'Crab Nebula',     ra: 83.63,  dec: 22.01,  dist: 1930, type: 'Remnant' },
-  { name: 'Butterfly Nebula',ra: 273.75, dec: -37.10, dist: 1300, type: 'Nebula'  },
-  { name: 'Lagoon Nebula',   ra: 270.92, dec: -24.38, dist: 1250, type: 'Nebula'  },
-  { name: 'Eagle Nebula',    ra: 274.70, dec: -13.81, dist: 2000, type: 'Nebula'  },
-  { name: 'Witch Head',      ra: 77.40,  dec: -7.23,  dist: 300,  type: 'Nebula'  },
-  { name: 'California Neb.', ra: 60.55,  dec: 36.42,  dist: 460,  type: 'Nebula'  },
-  { name: 'Rosette Nebula',  ra: 97.95,  dec: 4.95,   dist: 1600, type: 'Nebula'  },
+  // Emission nebulae
+  { name: 'Orion Nebula',       ra: 83.82,  dec: -5.39,  dist: 1344,  type: 'Nebula'   },
+  { name: 'Helix Nebula',       ra: 337.41, dec: -20.84, dist: 694,   type: 'Nebula'   },
+  { name: 'Butterfly Nebula',   ra: 273.75, dec: -37.10, dist: 3800,  type: 'Nebula'   },
+  { name: 'Lagoon Nebula',      ra: 270.92, dec: -24.38, dist: 4100,  type: 'Nebula'   },
+  { name: 'Eagle Nebula',       ra: 274.70, dec: -13.81, dist: 5700,  type: 'Nebula'   },
+  { name: 'Witch Head',         ra: 77.40,  dec: -7.23,  dist: 800,   type: 'Nebula'   },
+  { name: 'California Nebula',  ra: 60.55,  dec: 36.42,  dist: 1500,  type: 'Nebula'   },
+  { name: 'Rosette Nebula',     ra: 97.95,  dec: 4.95,   dist: 5200,  type: 'Nebula'   },
+  { name: 'North America Neb.', ra: 314.02, dec: 44.33,  dist: 1600,  type: 'Nebula'   },
+  { name: 'Horsehead Nebula',   ra: 85.24,  dec: -2.46,  dist: 1375,  type: 'Nebula'   },
+  { name: 'Flame Nebula',       ra: 85.41,  dec: -1.90,  dist: 1350,  type: 'Nebula'   },
+  { name: 'Running Man',        ra: 83.95,  dec: -4.88,  dist: 1350,  type: 'Nebula'   },
+  { name: 'Pelican Nebula',     ra: 314.75, dec: 44.37,  dist: 1800,  type: 'Nebula'   },
+  { name: 'Trifid Nebula',      ra: 270.59, dec: -23.03, dist: 5200,  type: 'Nebula'   },
+  { name: 'Omega Nebula',       ra: 275.19, dec: -16.18, dist: 5000,  type: 'Nebula'   },
+  { name: 'Eta Carinae Nebula', ra: 161.26, dec: -59.68, dist: 7500,  type: 'Nebula'   },
+  // Planetary nebulae
+  { name: 'Ring Nebula',        ra: 283.40, dec: 33.03,  dist: 2300,  type: 'Planetary'},
+  { name: 'Dumbbell Nebula',    ra: 299.90, dec: 22.72,  dist: 1360,  type: 'Planetary'},
+  { name: 'Owl Nebula',         ra: 168.70, dec: 55.02,  dist: 2030,  type: 'Planetary'},
+  { name: 'Ghost of Jupiter',   ra: 155.87, dec: -18.64, dist: 1400,  type: 'Planetary'},
+  { name: 'Cat\'s Eye Nebula',  ra: 269.64, dec: 66.63,  dist: 3300,  type: 'Planetary'},
+  // Supernova remnants
+  { name: 'Crab Nebula',        ra: 83.63,  dec: 22.01,  dist: 6500,  type: 'Remnant'  },
+  { name: 'Veil Nebula',        ra: 312.75, dec: 31.72,  dist: 2400,  type: 'Remnant'  },
+  // Open clusters
+  { name: 'Pleiades',           ra: 56.75,  dec: 24.11,  dist: 444,   type: 'Cluster'  },
+  { name: 'Hyades',             ra: 66.75,  dec: 15.87,  dist: 153,   type: 'Cluster'  },
+  { name: 'Beehive (M44)',      ra: 130.05, dec: 19.98,  dist: 577,   type: 'Cluster'  },
+  { name: 'Alpha Persei Cl.',   ra: 51.75,  dec: 49.86,  dist: 557,   type: 'Cluster'  },
+  { name: 'Coma Star Cluster',  ra: 186.77, dec: 26.10,  dist: 288,   type: 'Cluster'  },
+  { name: 'S. Pleiades (IC2602)',ra:160.74, dec: -64.40, dist: 479,   type: 'Cluster'  },
+  { name: 'IC 2391',            ra: 130.07, dec: -53.04, dist: 479,   type: 'Cluster'  },
 ];
 
 const nebulaLabelEls = [];
 
+const NEBULA_COLOURS = {
+  Nebula:    0x44ff88,  // green
+  Planetary: 0x44ddff,  // cyan
+  Remnant:   0xff6644,  // orange-red
+  Cluster:   0xffdd44,  // amber
+};
+
 function buildNebulae() {
   for (const neb of NEBULAE) {
-    neb.pos = raDecDistToXYZ(neb.ra, neb.dec, neb.dist);
-    // Marker: small tetrahedron
+    neb.pos = raDecDistToXYZ(neb.ra, neb.dec, neb.dist / 3.26156); // dist stored in LY, function expects parsecs
+    const colour = NEBULA_COLOURS[neb.type] || 0x44ff88;
     const geom = new THREE.OctahedronGeometry(0.3, 0);
-    const mat  = new THREE.MeshBasicMaterial({ color: 0x44ff88, wireframe: true, transparent: true, opacity: 0.6 });
+    const mat  = new THREE.MeshBasicMaterial({ color: colour, wireframe: true, transparent: true, opacity: 0.6 });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.copy(neb.pos);
     scene.add(mesh);
@@ -1230,18 +1259,32 @@ function buildNebulae() {
     div.className = 'nebula-label';
     div.textContent = neb.name;
     div.style.display = 'none';
+    div.style.color = '#' + (NEBULA_COLOURS[neb.type] || 0x44ff88).toString(16).padStart(6, '0');
     document.body.appendChild(div);
     nebulaLabelEls.push({ el: div, neb });
   }
 }
 
+let nebulaeVisible = true;
+
+function setNebulaeVisible(show) {
+  nebulaeVisible = show;
+  for (const { el, neb } of nebulaLabelEls) {
+    if (!show) el.style.display = 'none';
+    if (neb.mesh) neb.mesh.visible = show;
+  }
+  document.getElementById('more-nebulae')?.classList.toggle('active', show);
+}
+
 function updateNebulaLabels() {
+  if (!nebulaeVisible) return;
   const v = new THREE.Vector3();
   for (const { el, neb } of nebulaLabelEls) {
     v.copy(neb.pos).project(camera);
     if (v.z > 1) { el.style.display = 'none'; continue; }
     el.style.display = 'block';
-    el.style.left = Math.round((v.x * 0.5 + 0.5) * window.innerWidth + 8) + 'px';
+    const lx = Math.round((v.x * 0.5 + 0.5) * window.innerWidth + 8);
+    el.style.left = Math.min(lx, window.innerWidth - el.offsetWidth - 4) + 'px';
     el.style.top  = Math.round((-v.y * 0.5 + 0.5) * window.innerHeight - 6) + 'px';
   }
 }
@@ -1310,6 +1353,7 @@ async function init() {
   setLoadStatus('Drawing constellations...');
   buildConstellationLines(allStars);
   buildNebulae();
+  document.getElementById('more-nebulae')?.classList.add('active');
   animate();
   const overlay = document.getElementById('loading-overlay');
   if (overlay) {
@@ -1453,5 +1497,8 @@ init();
   });
   document.getElementById('more-colors')?.addEventListener('click', () => {
     document.getElementById('color-mode-btn').click(); closeMore();
+  });
+  document.getElementById('more-nebulae')?.addEventListener('click', () => {
+    setNebulaeVisible(!nebulaeVisible);
   });
 }());

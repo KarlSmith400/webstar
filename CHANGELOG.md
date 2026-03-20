@@ -4,6 +4,20 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.25.0] - 2026-03-20
+
+### Added
+- **Karl Smith branding in top bar** - CRT-animated KS logo links to karlsmith.design; sits right-aligned in the top bar with phosphor-green glow matching the brand aesthetic
+- **30 deep-sky objects** - nebulae, planetary nebulae, supernova remnants, and open clusters at correct 3D positions; type-coded wireframe markers (green=nebula, cyan=planetary, orange=remnant, amber=cluster); toggle via More panel
+- **Nebulae visibility toggle** - More panel button shows/hides all deep-sky markers and labels
+
+### Fixed
+- All deep-sky object distances corrected to light-years - 12 entries were stored in parsecs, placing them 3.26x too close (Orion Nebula was at 412 LY instead of 1,344 LY; Pleiades at 136 LY instead of 444 LY; Crab Nebula at 1,930 LY instead of 6,500 LY)
+- Nebula labels no longer repeat the type word (e.g. "California Nebula · Nebula" reduced to "California Nebula")
+- Nebula labels clamped so they never clip off the right edge of the screen on narrow viewports
+
+---
+
 ## [0.24.0] - 2026-03-20
 
 ### Added
