@@ -51,6 +51,10 @@ function displayR(au) {
   return Math.pow(au, 0.55) * 8;
 }
 
+function _scaledR(r_earth) {
+  return Math.max(0.015, r_earth * 0.10);
+}
+
 // ---- Planet colour by equilibrium temperature ----
 function tempToHex(tempK) {
   if (tempK == null) return 0x888888;
@@ -98,6 +102,33 @@ const MOONS = {
   Neptune: [
     { name: 'Triton', sma_km: 354800, e: 0.000, i_deg: 157.3, period: 5.8769, omega_deg: 0.0, Omega_deg: 178.1, M0_deg: 63.0, r_earth: 0.212 },
   ],
+};
+
+// ---- Planetary ring systems ----
+// Radii from NASA Ring-Moon Systems Node (pds-rings.seti.org); planet radii from JPL SSD
+// Ring coords in units of planet equatorial radius — applied as children of the planet mesh
+// so they inherit the planet's proportional display scale automatically.
+const RINGS = {
+  Jupiter: { tilt_deg: 3.13, r_eq_km: 71492, bands: [
+    { inner_km: 100000, outer_km: 122400, color: 0x443322, opacity: 0.12 }, // Halo
+    { inner_km: 122400, outer_km: 129100, color: 0x554433, opacity: 0.25 }, // Main Ring
+  ]},
+  Saturn: { tilt_deg: 26.73, r_eq_km: 60268, bands: [
+    { inner_km:  66900, outer_km:  74491, color: 0x887766, opacity: 0.20 }, // D Ring
+    { inner_km:  74491, outer_km:  91975, color: 0xaa9977, opacity: 0.55 }, // C Ring
+    { inner_km:  91975, outer_km: 117570, color: 0xddd0bb, opacity: 0.90 }, // B Ring (brightest)
+    { inner_km: 117500, outer_km: 122050, color: 0x443322, opacity: 0.25 }, // Cassini Division
+    { inner_km: 122050, outer_km: 136770, color: 0xccbba0, opacity: 0.75 }, // A Ring
+    { inner_km: 139826, outer_km: 140612, color: 0xaaaaaa, opacity: 0.40 }, // F Ring
+  ]},
+  Uranus: { tilt_deg: 97.77, r_eq_km: 25559, bands: [
+    { inner_km: 37850, outer_km: 51178, color: 0x778899, opacity: 0.45 }, // Main ring system (Six→Epsilon)
+  ]},
+  Neptune: { tilt_deg: 28.32, r_eq_km: 24764, bands: [
+    { inner_km: 41000, outer_km: 43000, color: 0x446688, opacity: 0.30 }, // Galle (diffuse)
+    { inner_km: 53150, outer_km: 57200, color: 0x5577aa, opacity: 0.40 }, // Le Verrier + Lassell
+    { inner_km: 62926, outer_km: 62941, color: 0x6688bb, opacity: 0.65 }, // Adams Ring
+  ]},
 };
 
 function getMoonPos(moon, planetPos, simTime, scale) {
@@ -354,13 +385,29 @@ export function enter(star, system) {
     scene.add(orbitLine);
     _systemObjects.push(orbitLine);
 
-    // Planet sphere
-    const r_disp = Math.max(0.18, Math.min(0.9, (planet.radius_earth || 1) * 0.12));
-    const mesh   = new THREE.Mesh(
-      new THREE.SphereGeometry(r_disp, 16, 8),
+    // Planet sphere — unit sphere scaled so scale can be updated without geometry rebuild
+    const r_earth = planet.radius_earth || 1;
+    const mesh    = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 16, 8),
       new THREE.MeshLambertMaterial({ color: tempToHex(planet.temp_k) })
     );
+    mesh.scale.setScalar(_scaledR(r_earth));
     scene.add(mesh);
+
+    // Planetary rings — added as children so they follow the planet automatically
+    const ringData = RINGS[planet.name];
+    if (ringData) {
+      const tilt = (ringData.tilt_deg * Math.PI) / 180;
+      for (const band of ringData.bands) {
+        const inner = band.inner_km / ringData.r_eq_km;
+        const outer = band.outer_km / ringData.r_eq_km;
+        const geo = new THREE.RingGeometry(inner, outer, 128);
+        const mat = new THREE.MeshBasicMaterial({ color: band.color, opacity: band.opacity, transparent: true, side: THREE.DoubleSide });
+        const ringMesh = new THREE.Mesh(geo, mat);
+        ringMesh.rotation.x = Math.PI / 2 + tilt;
+        mesh.add(ringMesh);
+      }
+    }
 
     // Label
     const label = document.createElement('div');
@@ -368,10 +415,12 @@ export function enter(star, system) {
     const tags = [smaTag, eccTag, omegaTag, OmegaTag].filter(Boolean);
     label.innerHTML = `<span class="sys-name">${planet.name}</span>`
       + (tags.length ? `<br><span class="sys-tag">${tags.join(' · ')}</span>` : '');
-    label.style.cssText = 'position:fixed;pointer-events:none;display:none;';
+    label.style.cssText = 'position:fixed;pointer-events:auto;display:none;cursor:pointer;';
     document.body.appendChild(label);
 
-    meshEntries.push({ mesh, getPos: getPlanetPos(planet, a_disp), planet, sma_au, smaTag, eccTag, label });
+    const entry = { mesh, getPos: getPlanetPos(planet, a_disp), planet, sma_au, smaTag, eccTag, label, r_earth };
+    label.addEventListener('click', () => { focusPlanet(entry); _showDetail(entry); });
+    meshEntries.push(entry);
   }
 
   // Camera above the ecliptic plane looking toward the system
@@ -444,8 +493,9 @@ export function update(dt_ms) {
     controls.target.copy(pos);
     camera.position.copy(pos).add(offset);
 
-    // Update moon positions relative to the moving planet
+    // Update moon positions and orbit rings relative to the moving planet
     for (const m of moonEntries) {
+      m.ring.position.copy(pos);
       const mpos = getMoonPos(m.moon, pos, simTime, m.moonDisplayScale);
       m.mesh.position.copy(mpos);
       const sp = toScreenPx(mpos);
@@ -463,16 +513,18 @@ function buildMoons(entry) {
   clearMoons();
   const moons = MOONS[entry.planet.name];
   if (!moons || !moons.length) return 0;
-  const planetPos = entry.getPos(simTime);
-  const planetR = entry.mesh.geometry.parameters.radius;
+  const planetR = entry.mesh.scale.x;
 
-  // Scale so outermost moon sits at 5× planet sphere radius
+  // Scale so innermost moon sits just outside the planet (2× radius), capped so outermost ≤ 20× radius
+  const minSmaKm = Math.min(...moons.map(m => m.sma_km));
   const maxSmaKm = Math.max(...moons.map(m => m.sma_km));
-  const moonDisplayScale = (planetR * 5) / (maxSmaKm / AU_KM);
+  const scaleFromInner = (planetR * 2) / (minSmaKm / AU_KM);
+  const scaleFromOuter = (planetR * 20) / (maxSmaKm / AU_KM);
+  const moonDisplayScale = Math.min(scaleFromInner, scaleFromOuter);
 
   for (const moon of moons) {
     const a = (moon.sma_km / AU_KM) * moonDisplayScale;
-    const r = Math.max(0.04, Math.min(0.12, (moon.r_earth || 0.1) * 0.3));
+    const r = _scaledR(moon.r_earth || 0.1);
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(r, 10, 6),
       new THREE.MeshLambertMaterial({ color: 0xaaaaaa })
@@ -486,7 +538,7 @@ function buildMoons(entry) {
     const w_r = moon.omega_deg * Math.PI / 180;
     for (let j = 0; j <= 64; j++) {
       const E_sample = (j / 64) * Math.PI * 2;
-      ringPts.push(keplerToWorld(a, moon.e, i_r, O_r, w_r, E_sample).add(planetPos));
+      ringPts.push(keplerToWorld(a, moon.e, i_r, O_r, w_r, E_sample));
     }
     const ring = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(ringPts),
@@ -531,7 +583,7 @@ function focusPlanet(entry) {
   _systemObjects.forEach(o => { o.visible = false; });
   const outerR = buildMoons(entry) || 0;
   const planetPos = entry.getPos(simTime);
-  const r = entry.mesh.geometry.parameters.radius;
+  const r = entry.mesh.scale.x;
   const viewDist = Math.max(r * 8, outerR * 2.5);
   flyToPosition(planetPos.clone().add(new THREE.Vector3(0, viewDist * 0.5, viewDist)), planetPos.clone());
   controls.minDistance = r * 2;

@@ -4,6 +4,29 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.29.0] - 2026-03-21
+
+### Added
+- **Planetary rings** - Saturn, Uranus, Neptune and Jupiter all render their ring systems in the system view; Saturn shows 6 bands (D, C, B, Cassini Division, A, F rings); Uranus shows its main narrow ring system (Six through Epsilon); Neptune shows Galle, Le Verrier/Lassell, and Adams rings; Jupiter shows the Halo and Main Ring; rings are children of their planet mesh so they follow correctly as the planet orbits; tilt angles use each planet's real axial tilt; data from NASA Ring-Moon Systems Node (pds-rings.seti.org)
+
+---
+
+## [0.28.0] - 2026-03-21
+
+### Added
+- **Click planet label to zoom** - clicking the planet name label in the system view zooms the camera to that planet and opens its detail panel; labels are now interactive (pointer cursor) making small inner planets easy to target without needing to hit a tiny sphere
+
+### Fixed
+- Moon orbit rings now track the planet as it moves - rings were built at a fixed position snapshot and drifted as the planet orbited
+- Moon sizes now use the same proportional formula as planets so the Moon is correctly ~27% of Earth's diameter rather than near-identical
+- Inner moons of large planets (e.g. Mimas inside Saturn) now always render outside the planet sphere - orbit scale anchors the innermost moon at 2× planet radius with the outermost capped at 20×
+
+### Changed
+- Planet sizes now always use proportional (true relative) radii; the size difference between rocky worlds and gas giants is immediately visible
+- Planet label click zooms to that planet; removed the separate size-toggle button
+
+---
+
 ## [0.27.0] - 2026-03-21
 
 ### Added
