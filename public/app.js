@@ -40,33 +40,13 @@ function spectToHex(spect) {
 // --- Build star field ---
 let starDataArray = [];
 let pointsMesh = null;
+const MAX_STARS = 135000;
+const _starPositions = new Float32Array(MAX_STARS * 3);
+const _starColors    = new Float32Array(MAX_STARS * 3);
+let _starGeom = null;
+let _starCount = 0;
 
-function buildStarField(stars) {
-  starDataArray = stars;
-
-  const positions = new Float32Array(stars.length * 3);
-  const colors = new Float32Array(stars.length * 3);
-  const color = new THREE.Color();
-
-  for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    positions[i * 3]     = s.x;
-    positions[i * 3 + 1] = s.y;
-    positions[i * 3 + 2] = s.z;
-
-    color.setHex(spectToHex(s.spect));
-    // Pogson scale: each magnitude step = 10^0.4 ≈ 2.512× brightness difference
-    // Normalised so mag 0 (Vega) = 1.0; floor at 0.05 so dim stars remain visible
-    const brightness = Math.max(0.05, Math.min(1.0, Math.pow(10, -0.4 * s.mag / 2.5)));
-    colors[i * 3]     = color.r * brightness;
-    colors[i * 3 + 1] = color.g * brightness;
-    colors[i * 3 + 2] = color.b * brightness;
-  }
-
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
+function initStarGeometry() {
   // Soft circular sprite so stars render as round glowing dots
   const starCanvas = document.createElement('canvas');
   starCanvas.width = starCanvas.height = 32;
@@ -79,6 +59,15 @@ function buildStarField(stars) {
   ctx.fillRect(0, 0, 32, 32);
   const starTex = new THREE.CanvasTexture(starCanvas);
 
+  _starGeom = new THREE.BufferGeometry();
+  const posAttr = new THREE.BufferAttribute(_starPositions, 3);
+  const colAttr = new THREE.BufferAttribute(_starColors, 3);
+  posAttr.usage = THREE.DynamicDrawUsage;
+  colAttr.usage = THREE.DynamicDrawUsage;
+  _starGeom.setAttribute('position', posAttr);
+  _starGeom.setAttribute('color',    colAttr);
+  _starGeom.setDrawRange(0, 0);
+
   const mat = new THREE.PointsMaterial({
     vertexColors: true,
     sizeAttenuation: false,
@@ -90,8 +79,34 @@ function buildStarField(stars) {
     depthWrite: false,
   });
 
-  pointsMesh = new THREE.Points(geom, mat);
+  pointsMesh = new THREE.Points(_starGeom, mat);
   scene.add(pointsMesh);
+}
+
+function addStarBatch(stars) {
+  const color = new THREE.Color();
+  for (const s of stars) {
+    const i = _starCount++;
+    _starPositions[i * 3]     = s.x;
+    _starPositions[i * 3 + 1] = s.y;
+    _starPositions[i * 3 + 2] = s.z;
+    color.setHex(spectToHex(s.spect));
+    const brightness = Math.max(0.05, Math.min(1.0, Math.pow(10, -0.4 * s.mag / 2.5)));
+    _starColors[i * 3]     = color.r * brightness;
+    _starColors[i * 3 + 1] = color.g * brightness;
+    _starColors[i * 3 + 2] = color.b * brightness;
+    starDataArray.push(s);
+  }
+  const prevCount = _starCount - stars.length;
+  _starGeom.attributes.position.updateRange = { offset: prevCount * 3, count: stars.length * 3 };
+  _starGeom.attributes.color.updateRange    = { offset: prevCount * 3, count: stars.length * 3 };
+  _starGeom.attributes.position.needsUpdate = true;
+  _starGeom.attributes.color.needsUpdate    = true;
+  _starGeom.setDrawRange(0, _starCount);
+}
+
+function buildStarField(stars) {
+  addStarBatch(stars);
 }
 
 // --- Binary / companion star links ---
@@ -239,8 +254,9 @@ let dragMoved = false;
 let mouseDown = false;
 const HIT_RADIUS_PX = 18; // pixels
 
-renderer.domElement.addEventListener('mousedown', () => { dragMoved = false; mouseDown = true; });
-renderer.domElement.addEventListener('mouseup',   (e) => { mouseDown = false; if (!dragMoved) onMouseClick(e); });
+renderer.domElement.addEventListener('mousedown', (e) => { dragMoved = false; mouseDown = true; e.preventDefault(); });
+renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
+renderer.domElement.addEventListener('mouseup',   (e) => { mouseDown = false; if (!dragMoved) onMouseClick(e); dragMoved = false; });
 renderer.domElement.addEventListener('mousemove', () => { if (mouseDown) dragMoved = true; });
 
 function onMouseClick(e) {
@@ -319,9 +335,15 @@ function onMouseClick(e) {
 let selectedMarkerStar = null;
 let selectedLabel = null;
 
+let hiddenPoolLabel = null;
+
 function placeMarker(star) {
   removeMarker();
   selectedMarkerStar = star;
+
+  // Hide the labelPool entry for this star to avoid duplicate labels
+  const poolEntry = labelPool.find(l => l.star === star);
+  if (poolEntry) { poolEntry.el.style.visibility = 'hidden'; hiddenPoolLabel = poolEntry.el; }
 
   // Persistent label at the star's 3D position
   selectedLabel = document.createElement('div');
@@ -363,6 +385,7 @@ function updateMarkerScale() {
 function removeMarker() {
   if (selectedMarker) { scene.remove(selectedMarker); selectedMarker = null; }
   if (selectedLabel) { selectedLabel.remove(); selectedLabel = null; }
+  if (hiddenPoolLabel) { hiddenPoolLabel.style.visibility = ''; hiddenPoolLabel = null; }
   selectedMarkerStar = null;
 }
 
@@ -394,7 +417,9 @@ window.addEventListener('orientationchange', () => {
   _resizeTimer = setTimeout(() => { _resizing = false; }, 800);
 });
 
+let selectedStar = null;
 function showInfo(star) {
+  selectedStar = star;
   _lastShowInfoTime = Date.now();
   document.getElementById('star-name').textContent = star.name || 'Unnamed Star';
 
@@ -983,6 +1008,7 @@ function resetView() {
   removeMarker();
 }
 document.getElementById('reset-btn').addEventListener('click', resetView);
+document.getElementById('nav-reset').addEventListener('click', resetView);
 
 // --- Screenshot ---
 document.getElementById('screenshot-btn').addEventListener('click', () => {
@@ -1084,7 +1110,7 @@ renderer.domElement.addEventListener('mousemove', e => {
     if (d < closestD) { closest = star; closestD = d; }
   }
 
-  if (closest) {
+  if (closest && closest !== selectedStar) {
     const label = closest.name || closest.bayer || (closest.hip ? `HIP ${closest.hip}` : 'Star');
     tooltip.style.display = 'block';
     tooltip.style.left = (mx + 14) + 'px';
@@ -1096,7 +1122,7 @@ renderer.domElement.addEventListener('mousemove', e => {
     renderer.domElement.style.cursor = 'default';
   }
 });
-renderer.domElement.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+renderer.domElement.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; dragMoved = false; mouseDown = false; });
 
 // --- Distance ruler ---
 let rulerActive = false;
@@ -1297,13 +1323,9 @@ function setLoadStatus(msg) {
 
 async function init() {
   setLoadStatus('Loading star catalogue...');
-  const [starsRes, planetsRes] = await Promise.all([
-    fetch('/api/stars'),
-    fetch('/api/planets')
-  ]);
+  const [starsRes, planetsRes] = await Promise.all([fetch('/api/stars'), fetch('/api/planets')]);
   setLoadStatus('Parsing data...');
-  const stars = await starsRes.json();
-  const planetsArr = await planetsRes.json();
+  const [stars, planetsArr] = await Promise.all([starsRes.json(), planetsRes.json()]);
   // Index planets by HIP number and hostname for fast lookup
   for (const sys of planetsArr) {
     if (sys.hip) planetsByHip[String(sys.hip).trim()] = sys;
@@ -1335,26 +1357,38 @@ async function init() {
   planetsByHip['Sol'] = solSystem;
   planetsByHip['Sol (The Sun)'] = solSystem;
 
-  // Build set of star IDs that have planet data (for filter highlight)
-  for (const star of [...stars, { id: 'sol', name: 'Sol', hip: null, dist: 0 }]) {
-    if (findSystem(star)) {
-      planetHostIds.add(star.id);
-    }
-  }
+  const solData = { id: 'sol', name: 'Sol', x: 0, y: 0, z: 0, mag: -26.74, absmag: 4.83, lum: 1.0, dist: 0, spect: 'G2V' };
+  const allStars = [solData, ...stars];
 
-  // Add Sol into the star field as a regular point
-  const solData = [{ id: 'sol', name: 'Sol', x: 0, y: 0, z: 0, mag: -26.74, absmag: 4.83, lum: 1.0, dist: 0, spect: 'G2V' }];
-  const allStars = [...solData, ...stars];
-  setLoadStatus('Mapping ' + allStars.length.toLocaleString() + ' stars...');
-  buildStarField(allStars);
+  // Render stars in batches so they appear progressively
+  initStarGeometry();
+  animate();
+
+  const BATCH = 8000;
+  await new Promise(resolve => {
+    let offset = 0;
+    function nextBatch() {
+      const batch = allStars.slice(offset, offset + BATCH);
+      addStarBatch(batch);
+      offset += BATCH;
+      setLoadStatus(`Loading stars... ${Math.min(offset, allStars.length).toLocaleString()} / ${allStars.length.toLocaleString()}`);
+      if (offset < allStars.length) requestAnimationFrame(nextBatch);
+      else resolve();
+    }
+    requestAnimationFrame(nextBatch);
+  });
+
+  for (const star of allStars) {
+    if (findSystem(star)) planetHostIds.add(star.id);
+  }
+  setLoadStatus('Building catalogue...');
   buildSpatialGrid(allStars);
-  buildBinaryLinks(allStars); // must run before addLabels so companionCount is populated
+  buildBinaryLinks(allStars);
   addLabels(allStars);
   setLoadStatus('Drawing constellations...');
   buildConstellationLines(allStars);
   buildNebulae();
   document.getElementById('more-nebulae')?.classList.add('active');
-  animate();
   const overlay = document.getElementById('loading-overlay');
   if (overlay) {
     overlay.classList.add('fade-out');
@@ -1439,6 +1473,7 @@ init();
   }
   function closeInfo() {
     document.getElementById('info-panel').style.display = 'none';
+    selectedStar = null;
   }
   function closeJump() {
     document.getElementById('jump-panel').style.display = 'none';

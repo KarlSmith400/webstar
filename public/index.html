@@ -12,6 +12,7 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    canvas { user-select: none; -webkit-user-select: none; }
     body { background: #000; overflow: hidden; font-family: sans-serif; color: #fff; }
     #scene { width: 100vw; height: 100vh; display: block; }
 
@@ -258,8 +259,8 @@
       width: 1px; background: rgba(255,255,255,0.08);
       margin: 10px 4px; flex-shrink: 0;
     }
-    .nav-kofi { color: #a87; max-width: 72px; text-decoration: none; }
-    .nav-kofi:active { color: #fc6; }
+    .nav-kofi { color: #39FF14; max-width: 72px; text-decoration: none; }
+    .nav-kofi:active { color: #7fff5a; }
 
     /* ---- More panel (mobile bottom sheet) ---- */
     #more-panel {
@@ -570,6 +571,10 @@
       </svg>
       <span>Jump</span>
     </button>
+    <button class="nav-btn" id="nav-reset" title="Reset View">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      <span>Reset</span>
+    </button>
     <button class="nav-btn" id="nav-more" title="More">
       <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       <span>More</span>
@@ -632,7 +637,7 @@
     </div>
   </div>
 
-  <button id="reset-btn">Reset View</button>
+  <button id="reset-btn" style="display:none">Reset View</button>
   <button id="constellation-toggle" style="position:fixed;top:20px;right:130px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Constellations</button>
   <button id="planet-filter" style="position:fixed;top:20px;right:290px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Planet Hosts</button>
   <button id="ruler-btn" style="position:fixed;top:20px;right:450px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;" title="Click two stars to measure distance">Ruler</button>
