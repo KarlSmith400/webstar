@@ -804,7 +804,7 @@ function flyTo(star) {
 }
 
 renderer.domElement.addEventListener('dblclick', (e) => {
-  if (SolarSystem.isActive()) return;
+  if (SolarSystem.isActive()) { SolarSystem.handleDblClick(e); return; }
   const mx = e.clientX, my = e.clientY;
 
   // Check Sol

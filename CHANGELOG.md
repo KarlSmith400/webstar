@@ -4,6 +4,26 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.27.0] - 2026-03-21
+
+### Added
+- **Moon system view** - double-click any planet (or tap "View Moon Orbits" in its info panel) to zoom the camera to that planet and watch its moons orbit in real time; 20 major moons across 6 planets using JPL mean orbital elements at J2000 epoch: Earth's Moon, Mars' Phobos and Deimos, Jupiter's Galilean moons (Io, Europa, Ganymede, Callisto), Saturn's six moons (Mimas, Enceladus, Tethys, Dione, Rhea, Titan), Uranus' five major moons (Miranda, Ariel, Umbriel, Titania, Oberon), Neptune's Triton
+- **Planet zoom** - camera locks onto and tracks a planet as it orbits; HZ ring and planet orbit lines hidden during planet focus to avoid visual clutter; "← System view" button returns to full system view
+- **Moon info panel** - clicking a moon shows its orbital period, semi-major axis, eccentricity, inclination and radius
+- **Host star info in system view** - clicking the central star shows spectral type, luminosity, estimated mass, distance and magnitude; includes "← Back to Star Map" button
+- **"View Moon Orbits" button** - appears in planet detail panel for any planet with known moons
+- **Spectral colours matched** - system view star sprite M-type colour corrected to match main star field (`#ffcc6f`)
+
+### Fixed
+- Planet detail panel (system view) no longer forces full width on mobile - sits compact bottom-left, expands only as wide as content needs; max-width 260px
+- Star info panel on desktop now compact card (300px max-width) bottom-left rather than stretching across the screen; mobile retains full-width bottom sheet with drag handle
+- System view "← System view" button repositioned below the sys-panel info box so it is no longer hidden behind it
+- Moon orbit display scale computed per-planet so Phobos/Deimos are visible around Mars (fixed-scale 300 placed them inside the planet sphere)
+- HZ ring and orbit lines hidden when zoomed into a planet so they no longer fill the screen
+- Moon click info panel wired up
+
+---
+
 ## [0.26.0] - 2026-03-21
 
 ### Added

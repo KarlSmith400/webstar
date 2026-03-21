@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { camera, controls, toScreenPx } from './camera.js';
+import { camera, controls, toScreenPx, flyToPosition } from './camera.js';
 
 // ---- Kepler equation solver (Newton-Raphson) ----
 function solveKepler(M, e) {
@@ -62,11 +62,60 @@ function tempToHex(tempK) {
   return 0xaaddff;
 }
 
+// ---- Moon orbital data (JPL Planetary Satellite Mean Elements, J2000) ----
+// sma_km: semi-major axis in km | e: eccentricity | i_deg: inclination
+// period: days | omega/Omega/M0: degrees | r_earth: radius relative to Earth
+// Source: https://ssd.jpl.nasa.gov/sats/elem/
+const AU_KM = 149597870.7;
+
+const MOONS = {
+  Earth:   [{ name: 'Moon',      sma_km: 384400,   e: 0.0554, i_deg: 5.16,  period: 27.3217, omega_deg: 318.15, Omega_deg: 125.08, M0_deg: 135.27, r_earth: 0.273 }],
+  Mars:    [
+    { name: 'Phobos', sma_km: 9375,   e: 0.015, i_deg: 1.1,  period: 0.3187,  omega_deg: 216.3, Omega_deg: 169.2, M0_deg: 189.7, r_earth: 0.004 },
+    { name: 'Deimos', sma_km: 23457,  e: 0.000, i_deg: 1.8,  period: 1.2625,  omega_deg: 0.0,   Omega_deg: 54.3,  M0_deg: 205.0, r_earth: 0.002 },
+  ],
+  Jupiter: [
+    { name: 'Io',       sma_km: 421800,  e: 0.004, i_deg: 0.04, period: 1.7632,  omega_deg: 49.1,  Omega_deg: 0.0,   M0_deg: 330.9, r_earth: 0.286 },
+    { name: 'Europa',   sma_km: 671100,  e: 0.009, i_deg: 0.47, period: 3.5252,  omega_deg: 45.0,  Omega_deg: 184.0, M0_deg: 345.4, r_earth: 0.245 },
+    { name: 'Ganymede', sma_km: 1070400, e: 0.001, i_deg: 0.18, period: 7.1546,  omega_deg: 198.3, Omega_deg: 58.5,  M0_deg: 324.8, r_earth: 0.413 },
+    { name: 'Callisto', sma_km: 1882700, e: 0.007, i_deg: 0.19, period: 16.6890, omega_deg: 43.8,  Omega_deg: 309.1, M0_deg: 87.4,  r_earth: 0.378 },
+  ],
+  Saturn: [
+    { name: 'Mimas',     sma_km: 186000,  e: 0.020, i_deg: 1.6,  period: 0.9424,  omega_deg: 160.4, Omega_deg: 66.2,  M0_deg: 275.3, r_earth: 0.031 },
+    { name: 'Enceladus', sma_km: 238400,  e: 0.005, i_deg: 0.0,  period: 1.3702,  omega_deg: 119.5, Omega_deg: 0.0,   M0_deg: 57.0,  r_earth: 0.040 },
+    { name: 'Tethys',    sma_km: 295000,  e: 0.001, i_deg: 1.1,  period: 1.8878,  omega_deg: 335.3, Omega_deg: 273.0, M0_deg: 0.0,   r_earth: 0.084 },
+    { name: 'Dione',     sma_km: 377700,  e: 0.002, i_deg: 0.0,  period: 2.7369,  omega_deg: 116.0, Omega_deg: 0.0,   M0_deg: 212.0, r_earth: 0.088 },
+    { name: 'Rhea',      sma_km: 527200,  e: 0.001, i_deg: 0.3,  period: 4.5175,  omega_deg: 44.3,  Omega_deg: 133.7, M0_deg: 31.5,  r_earth: 0.120 },
+    { name: 'Titan',     sma_km: 1221900, e: 0.029, i_deg: 0.3,  period: 15.9454, omega_deg: 78.3,  Omega_deg: 78.6,  M0_deg: 11.7,  r_earth: 0.404 },
+  ],
+  Uranus: [
+    { name: 'Miranda', sma_km: 129846,  e: 0.001, i_deg: 4.4,  period: 1.4135,  omega_deg: 154.8, Omega_deg: 100.9, M0_deg: 73.0,  r_earth: 0.037 },
+    { name: 'Ariel',   sma_km: 190929,  e: 0.001, i_deg: 0.0,  period: 2.5204,  omega_deg: 9.6,   Omega_deg: 0.0,   M0_deg: 193.5, r_earth: 0.091 },
+    { name: 'Umbriel', sma_km: 265986,  e: 0.004, i_deg: 0.1,  period: 4.1442,  omega_deg: 183.4, Omega_deg: 174.8, M0_deg: 253.0, r_earth: 0.092 },
+    { name: 'Titania', sma_km: 436298,  e: 0.002, i_deg: 0.1,  period: 8.7059,  omega_deg: 184.0, Omega_deg: 29.5,  M0_deg: 68.1,  r_earth: 0.123 },
+    { name: 'Oberon',  sma_km: 583511,  e: 0.002, i_deg: 0.1,  period: 13.4632, omega_deg: 132.2, Omega_deg: 76.8,  M0_deg: 143.6, r_earth: 0.119 },
+  ],
+  Neptune: [
+    { name: 'Triton', sma_km: 354800, e: 0.000, i_deg: 157.3, period: 5.8769, omega_deg: 0.0, Omega_deg: 178.1, M0_deg: 63.0, r_earth: 0.212 },
+  ],
+};
+
+function getMoonPos(moon, planetPos, simTime, scale) {
+  const n   = (2 * Math.PI) / moon.period;
+  const M   = ((moon.M0_deg * Math.PI / 180) + n * simTime);
+  const E   = solveKepler(M, moon.e);
+  const a   = (moon.sma_km / AU_KM) * scale;
+  const i   = moon.i_deg   * Math.PI / 180;
+  const Omega = moon.Omega_deg * Math.PI / 180;
+  const omega = moon.omega_deg * Math.PI / 180;
+  return keplerToWorld(a, moon.e, i, Omega, omega, E).add(planetPos);
+}
+
 // ---- Star glow sprite ----
 const SPECT_GLOW = {
   O: 'rgba(155,176,255,1)', B: 'rgba(170,191,255,1)', A: 'rgba(202,215,255,1)',
   F: 'rgba(248,247,255,1)', G: 'rgba(255,244,234,1)', K: 'rgba(255,210,161,1)',
-  M: 'rgba(255,180,111,1)',
+  M: 'rgba(255,204,111,1)',
 };
 
 function makeStarSprite(spect) {
@@ -231,6 +280,11 @@ let simTime  = 0;      // days from J2000
 let timeScale = 10;    // days per second
 let paused   = false;
 let meshEntries = [];  // { mesh, getPos, planet, sma_au, smaTag, eccTag, label }
+let _hostStar = null;
+let _starHitMesh = null;
+let _focusedEntry = null; // planet currently zoomed into
+let moonEntries   = [];   // { mesh, moon, label } for focused planet's moons
+let _systemObjects = [];  // HZ ring + orbit lines hidden during planet focus
 
 // ---- Raycaster ----
 const _ray   = new THREE.Raycaster();
@@ -249,10 +303,20 @@ export function enter(star, system) {
   const hzInner  = 0.95 * Math.sqrt(lum);
   const hzOuter  = 1.37 * Math.sqrt(lum);
 
+  _hostStar = star;
   scene.add(new THREE.PointLight(0xffffff, 2, 0));
   scene.add(new THREE.AmbientLight(0x1a1a2e));
   scene.add(makeStarSprite(star.spect));
-  scene.add(makeHZRing(hzInner, hzOuter));
+  const hzRing = makeHZRing(hzInner, hzOuter);
+  scene.add(hzRing);
+  _systemObjects.push(hzRing);
+
+  // Invisible hit sphere for clicking the star
+  _starHitMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 8, 8),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+  );
+  scene.add(_starHitMesh);
 
   // Debris belts
   const beltKey = star.id === 'sol' ? 'sol' : star.hip;
@@ -286,7 +350,9 @@ export function enter(star, system) {
     const OmegaTag = planet.Omega_deg    == null ? 'Ω unknown'   : null;
 
     // Orbit ring — full 3D Keplerian geometry
-    scene.add(makeOrbitLine(a_disp, e, i, Omega, omega));
+    const orbitLine = makeOrbitLine(a_disp, e, i, Omega, omega);
+    scene.add(orbitLine);
+    _systemObjects.push(orbitLine);
 
     // Planet sphere
     const r_disp = Math.max(0.18, Math.min(0.9, (planet.radius_earth || 1) * 0.12));
@@ -342,6 +408,12 @@ function _cleanup() {
   while (scene.children.length) scene.remove(scene.children[0]);
   meshEntries.forEach(e => e.label.remove());
   meshEntries = [];
+  _hostStar = null;
+  _starHitMesh = null;
+  _focusedEntry = null;
+  _systemObjects = [];
+  clearMoons();
+  document.getElementById('sys-zoom-back')?.remove();
 }
 
 export function isActive() { return active; }
@@ -364,6 +436,126 @@ export function update(dt_ms) {
       entry.label.style.top  = Math.round(sp.y - 16) + 'px';
     }
   }
+
+  // Keep camera locked onto focused planet as it moves
+  if (_focusedEntry) {
+    const pos = _focusedEntry.getPos(simTime);
+    const offset = camera.position.clone().sub(controls.target);
+    controls.target.copy(pos);
+    camera.position.copy(pos).add(offset);
+
+    // Update moon positions relative to the moving planet
+    for (const m of moonEntries) {
+      const mpos = getMoonPos(m.moon, pos, simTime, m.moonDisplayScale);
+      m.mesh.position.copy(mpos);
+      const sp = toScreenPx(mpos);
+      if (sp.behind) { m.label.style.display = 'none'; }
+      else {
+        m.label.style.display = 'block';
+        m.label.style.left = Math.round(sp.x + 6) + 'px';
+        m.label.style.top  = Math.round(sp.y - 12) + 'px';
+      }
+    }
+  }
+}
+
+function buildMoons(entry) {
+  clearMoons();
+  const moons = MOONS[entry.planet.name];
+  if (!moons || !moons.length) return 0;
+  const planetPos = entry.getPos(simTime);
+  const planetR = entry.mesh.geometry.parameters.radius;
+
+  // Scale so outermost moon sits at 5× planet sphere radius
+  const maxSmaKm = Math.max(...moons.map(m => m.sma_km));
+  const moonDisplayScale = (planetR * 5) / (maxSmaKm / AU_KM);
+
+  for (const moon of moons) {
+    const a = (moon.sma_km / AU_KM) * moonDisplayScale;
+    const r = Math.max(0.04, Math.min(0.12, (moon.r_earth || 0.1) * 0.3));
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 10, 6),
+      new THREE.MeshLambertMaterial({ color: 0xaaaaaa })
+    );
+    scene.add(mesh);
+
+    // Orbit ring - sample the Keplerian ellipse at 64 points
+    const ringPts = [];
+    const i_r = moon.i_deg   * Math.PI / 180;
+    const O_r = moon.Omega_deg * Math.PI / 180;
+    const w_r = moon.omega_deg * Math.PI / 180;
+    for (let j = 0; j <= 64; j++) {
+      const E_sample = (j / 64) * Math.PI * 2;
+      ringPts.push(keplerToWorld(a, moon.e, i_r, O_r, w_r, E_sample).add(planetPos));
+    }
+    const ring = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(ringPts),
+      new THREE.LineBasicMaterial({ color: 0x444466, opacity: 0.5, transparent: true })
+    );
+    scene.add(ring);
+
+    const label = document.createElement('div');
+    label.className = 'sys-label';
+    label.innerHTML = `<span class="sys-name" style="font-size:9px">${moon.name}</span>`;
+    label.style.cssText = 'position:fixed;pointer-events:none;display:none;';
+    document.body.appendChild(label);
+
+    moonEntries.push({ mesh, moon, label, ring, parentEntry: entry, moonDisplayScale });
+  }
+  return (maxSmaKm / AU_KM) * moonDisplayScale; // outer moon display radius
+}
+
+function clearMoons() {
+  for (const m of moonEntries) {
+    scene.remove(m.mesh);
+    scene.remove(m.ring);
+    m.label.remove();
+  }
+  moonEntries = [];
+}
+
+export function unfocusPlanet() {
+  if (!_focusedEntry) return;
+  _focusedEntry = null;
+  clearMoons();
+  _systemObjects.forEach(o => { o.visible = true; });
+  const maxR = meshEntries.length ? displayR(meshEntries[meshEntries.length - 1].sma_au) : 30;
+  flyToPosition(new THREE.Vector3(0, maxR * 0.9, maxR * 1.2), new THREE.Vector3(0, 0, 0));
+  controls.minDistance = 0.5;
+  controls.maxDistance = maxR * 20;
+  document.getElementById('sys-zoom-back')?.remove();
+}
+
+function focusPlanet(entry) {
+  _focusedEntry = entry;
+  _systemObjects.forEach(o => { o.visible = false; });
+  const outerR = buildMoons(entry) || 0;
+  const planetPos = entry.getPos(simTime);
+  const r = entry.mesh.geometry.parameters.radius;
+  const viewDist = Math.max(r * 8, outerR * 2.5);
+  flyToPosition(planetPos.clone().add(new THREE.Vector3(0, viewDist * 0.5, viewDist)), planetPos.clone());
+  controls.minDistance = r * 2;
+  controls.maxDistance = Math.max(r * 80, outerR * 10);
+  document.getElementById('sys-planet-detail').style.display = 'none';
+  document.getElementById('sys-zoom-back')?.remove();
+  const btn = document.createElement('button');
+  btn.id = 'sys-zoom-back';
+  btn.textContent = '← System view';
+  btn.style.cssText = 'position:fixed;top:160px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);color:#aaa;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;z-index:200;';
+  btn.addEventListener('click', unfocusPlanet);
+  document.body.appendChild(btn);
+}
+
+// ---- Planet double-click (zoom in) - kept for API compat ----
+export function handleDblClick(event) {
+  if (!active) return;
+  _mouse.x =  (event.clientX / window.innerWidth)  * 2 - 1;
+  _mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  _ray.setFromCamera(_mouse, camera);
+  const hits = _ray.intersectObjects(meshEntries.map(e => e.mesh));
+  if (!hits.length) return;
+  const entry = meshEntries.find(e => e.mesh === hits[0].object);
+  if (entry) focusPlanet(entry);
 }
 
 // ---- Planet click ----
@@ -372,14 +564,74 @@ export function handleClick(event) {
   _mouse.x =  (event.clientX / window.innerWidth)  * 2 - 1;
   _mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
   _ray.setFromCamera(_mouse, camera);
+
+  // Check star first
+  if (_starHitMesh) {
+    const starHits = _ray.intersectObject(_starHitMesh);
+    if (starHits.length) { _showStarDetail(); return; }
+  }
+
+  // Check moons
+  if (moonEntries.length) {
+    const moonHits = _ray.intersectObjects(moonEntries.map(m => m.mesh));
+    if (moonHits.length) {
+      const entry = moonEntries.find(m => m.mesh === moonHits[0].object);
+      if (entry) { _showMoonDetail(entry.moon); return; }
+    }
+  }
+
   const hits = _ray.intersectObjects(meshEntries.map(e => e.mesh));
   if (!hits.length) { document.getElementById('sys-planet-detail').style.display = 'none'; return; }
   const entry = meshEntries.find(e => e.mesh === hits[0].object);
   if (entry) _showDetail(entry);
 }
 
+function _showStarDetail() {
+  const s = _hostStar;
+  const lum = s.lum || 1.0;
+  const mass = Math.pow(lum, 0.25).toFixed(2);
+  const panel = document.getElementById('sys-planet-detail');
+  const rows = [
+    ['Spectral type', s.spect || 'Unknown'],
+    ['Luminosity',    `${lum < 0.001 ? lum.toExponential(2) : lum.toFixed(3)} L\u2609`],
+    ['Est. mass',     `~${mass} M\u2609`],
+    ['Distance',      s.dist ? `${s.dist.toFixed(2)} ly` : 'Sol'],
+    ['Magnitude',     s.mag != null ? s.mag.toFixed(2) : null],
+    ['Abs. magnitude',s.absmag != null ? s.absmag.toFixed(2) : null],
+    ['HIP',           s.hip ? `HIP ${s.hip}` : null],
+  ].filter(([, v]) => v != null);
+
+  panel.innerHTML = `
+    <div style="font-size:13px;color:#fff;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">${s.name || 'Host Star'}</div>
+    ${rows.map(([k, v]) => `<div style="font-size:11px;line-height:1.9;"><span style="color:#555;">${k}:</span> ${v}</div>`).join('')}
+    <button id="sys-exit-btn" style="margin-top:8px;width:100%;padding:5px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#aaa;font-size:11px;cursor:pointer;">← Back to Star Map</button>
+  `;
+  document.getElementById('sys-exit-btn').addEventListener('click', () => {
+    panel.style.display = 'none';
+    document.getElementById('sys-back-btn').click();
+  });
+  panel.style.display = 'block';
+}
+
+function _showMoonDetail(moon) {
+  const panel = document.getElementById('sys-planet-detail');
+  const rows = [
+    ['Orbital period', `${moon.period.toFixed(4)} days`],
+    ['Semi-major axis', `${moon.sma_km.toLocaleString()} km`],
+    ['Eccentricity',   moon.e.toFixed(4)],
+    ['Inclination',    `${moon.i_deg.toFixed(2)}\u00b0`],
+    ['Radius',         moon.r_earth ? `${moon.r_earth.toFixed(3)} R\u2295` : null],
+  ].filter(([, v]) => v != null);
+  panel.innerHTML = `
+    <div style="font-size:13px;color:#fff;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">${moon.name}</div>
+    ${rows.map(([k, v]) => `<div style="font-size:11px;line-height:1.9;"><span style="color:#555;">${k}:</span> ${v}</div>`).join('')}
+  `;
+  panel.style.display = 'block';
+}
+
 function _showDetail(entry) {
   const { planet, sma_au, smaTag, eccTag } = entry;
+  const hasMoons = MOONS[planet.name] && MOONS[planet.name].length > 0;
   const panel = document.getElementById('sys-planet-detail');
 
   const smaStr = planet.sma_au != null
@@ -413,7 +665,11 @@ function _showDetail(entry) {
   panel.innerHTML = `
     <div style="font-size:13px;color:#fff;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">${planet.name}</div>
     ${rows.map(([k, v]) => `<div style="font-size:11px;line-height:1.9;"><span style="color:#555;">${k}:</span> ${v}</div>`).join('')}
+    ${hasMoons ? `<button id="view-moons-btn" style="margin-top:8px;width:100%;padding:5px;background:rgba(100,180,255,0.15);border:1px solid rgba(100,180,255,0.3);border-radius:5px;color:#7af;font-size:11px;cursor:pointer;">View Moon Orbits</button>` : ''}
   `;
+  if (hasMoons) {
+    document.getElementById('view-moons-btn').addEventListener('click', () => focusPlanet(entry));
+  }
   panel.style.display = 'block';
 }
 
