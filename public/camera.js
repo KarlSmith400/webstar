@@ -73,10 +73,15 @@ export function updateCamera() {
 
 // --- Resize ---
 function onResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const w = document.documentElement.clientWidth;
+  const h = document.documentElement.clientHeight;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(w, h);
 }
 window.addEventListener('resize', onResize);
-// orientationchange fires before innerWidth/Height update on iOS — delay to let them settle
-window.addEventListener('orientationchange', () => setTimeout(onResize, 300));
+// orientationchange fires before dimensions settle on iOS - fire at 300ms and 600ms to catch both cases
+window.addEventListener('orientationchange', () => {
+  setTimeout(onResize, 300);
+  setTimeout(onResize, 600);
+});

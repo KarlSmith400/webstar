@@ -4,6 +4,21 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.26.0] - 2026-03-21
+
+### Added
+- **Progressive star loading** - stars render in batches of 8,000 as soon as data arrives; the loading overlay shows a live count so the map is usable within seconds rather than waiting for all 120,000 stars to process
+- **Reset button in nav bar** - always-accessible reset sits alongside Sky / Planets / Jump / More so the view can be restored in one tap from any state
+
+### Fixed
+- Hover tooltip now works immediately after rotating the view - `dragMoved` was never reset after a drag so the tooltip was suppressed until the next click; fixed by resetting on `mouseup` and `mouseleave`
+- Hover tooltip no longer shows for the currently selected star - the selection label already displays the name so the tooltip was redundant
+- Named star label (from labelPool) hidden while a star is selected to prevent two identical labels stacking on the same star; restored when deselected
+- Browser drag-select on the canvas no longer interferes with navigation (`user-select: none` + `dragstart` prevention)
+- Support nav button colour updated to phosphor green (`#39FF14`) matching KS brand
+
+---
+
 ## [0.25.0] - 2026-03-20
 
 ### Added

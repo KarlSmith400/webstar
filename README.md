@@ -74,7 +74,8 @@ WebStar/
 - **Route finder** -Shift+click two stars for shortest BFS jump path
 - **Constellation lines** -88 constellations with complete outlines from Stellarium's western sky culture HIP-pair data; toggling locks camera to Sol at minimum distance (Earth viewpoint) with free sky rotation; constellation names labelled in real time
 - **Binary companion links** -amber lines between confirmed close companion pairs (< 0.1 LY, Gliese catalog stars)
-- **Mobile-first universal UI** -bottom navigation bar (Sky / Planets / Jump / More) on every device; Ko-fi support button pinned to the right of the nav bar; top bar with WEBSTAR title and KS branding link; info panel and jump planner open as drag-to-resize bottom sheets with three snap heights; search bar always visible below the top bar
+- **Mobile-first universal UI** -bottom navigation bar (Sky / Planets / Jump / Reset / More) on every device; Ko-fi support button pinned to the right of the nav bar; top bar with WEBSTAR title and KS branding link; info panel and jump planner open as drag-to-resize bottom sheets with three snap heights; search bar always visible below the top bar
+- **Progressive loading** -stars render in batches as data arrives; live count shown in loading overlay so the map is usable within seconds on slow connections
 - **Spectral key drawer** -right-side pull-out tab reveals the spectral type legend and colour mode toggle without consuming fixed screen space
 - **Screenshot** -saves current view as PNG (via More menu or keyboard shortcut)
 - **Keyboard shortcuts** -C / P / J / R / D / Esc for all major controls
