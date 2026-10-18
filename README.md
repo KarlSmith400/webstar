@@ -159,6 +159,20 @@ https://webstar-r7fc.onrender.com
 
 Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up while the server fetches and caches the star catalogue - a loading screen with live status messages covers this. Subsequent visits are instant.
 
+## Forks
+
+### Project M Galaxy Map
+WebStar was forked to provide the 3D interactive galaxy map for **Mechanized Armour Commander** (Project M), a WPF tactical mech game. The fork:
+- Strips solar system view, constellation lines, nebulae, and astronomy-specific UI
+- Filters star data to 100 LY radius (4,059 stars + Sol at origin) via `export_100ly.js`
+- Adds Sol as the first entry in `stars_100ly.json` (hyg_id `"0"`, x/y/z 0,0,0)
+- Maps all 11 game systems to real HYG star IDs so they appear at true astronomical positions
+- Renders game jump routes as a distinct dim `LineSegments` layer connecting real star positions
+- Adds a game overlay layer: faction colour-coding per system, current location green ring
+- Redesigned UI: fixed left info panel (210 px) + flat bottom toolbar - no bottom sheets or cascaded menus
+- Communicates with the WPF host via WebView2 `postMessage` / `ExecuteScriptAsync`
+- Loads data from a static `stars_100ly.json` - no Express server required
+
 ## Planned
 
 - [ ] Proximity-based binary detection for non-Gliese stars

@@ -4,6 +4,25 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.31.0] - 2026-03-22
+
+### Changed (Project M fork)
+- **Sol added to star catalogue** — `stars_100ly.json` now opens with a Sol entry (hyg_id `"0"`, x/y/z 0,0,0, G2V, mag 0) so the origin system renders as a clickable star and game overlay data can match it by hygId
+- **Galaxy map UI redesigned** — left info panel (210 px fixed) replaces the bottom-sheet info panel; contains search, star info, jump planner, route result, and ruler readout; flat bottom toolbar (Jump / Reset / Factions / Ruler / Colours / Spectrum) replaces the three-button nav + cascaded More menu
+- **Game jump routes** rendered as dim blue-grey `LineSegments` connecting the real star positions of each linked system; distinct layer from the BFS planner lines
+- **Factions button** hidden until game state payload arrives; shows active indicator when overlay is on
+- **Spectral legend** moved into left panel as a collapsible section; spectral drawer pull-tab removed
+- Sol special-case click/hover handling removed from dblclick and mousemove — Sol is now found via the standard `starDataArray` loop since it is included in the JSON
+
+---
+
+## [0.30.0] - 2026-03-22
+
+### Added
+- **100 LY export script** (`export_100ly.js`) — generates `data/stars_100ly.json` and `data/stars_100ly.sql`; filters HYG v41 to 100 light years, normalises field names, embeds NASA exoplanet data per star (planet type, orbital elements, habitable zone flag), adds spectral colour hex and temperature band, full constellation names, and binary companion links; both outputs used as the data source for the Project M galaxy map fork
+
+---
+
 ## [0.29.0] - 2026-03-21
 
 ### Added
