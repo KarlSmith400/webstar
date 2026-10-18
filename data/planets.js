@@ -41,7 +41,10 @@ async function getPlanets() {
       console.warn(`NASA fetch failed (${err.message}); serving stale cache`);
       return { data: readCache(), source: 'stale' };
     }
-    throw err;
+    // No cache available (e.g. fresh deploy with NASA down). Return empty set
+    // rather than failing - the star map should still render without planets.
+    console.warn(`NASA fetch failed (${err.message}); no cache available, returning empty planet set`);
+    return { data: [], source: 'unavailable' };
   }
   console.log(`Fetched ${raw.length} planet records`);
 

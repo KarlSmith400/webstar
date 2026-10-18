@@ -1325,14 +1325,16 @@ async function init() {
   setLoadStatus('Loading star catalogue...');
   const [starsRes, planetsRes] = await Promise.all([fetch('/api/stars'), fetch('/api/planets')]);
 
-  // Surface degraded data sources (stale cache / bundled fallback) so the user knows
-  // the map isn't live. Pause briefly so the notice is readable before loading continues.
+  // Surface degraded data sources (stale cache / bundled fallback / unavailable)
+  // so the user knows the map isn't live. Pause briefly so the notice is readable.
   const starsSource = starsRes.headers.get('X-Data-Source');
   const planetsSource = planetsRes.headers.get('X-Data-Source');
+  const planetsFailed = !planetsRes.ok || planetsSource === 'unavailable';
   const notices = [];
   if (starsSource === 'fallback') notices.push('Star catalogue unavailable - showing 50 nearest stars from bundled snapshot');
   else if (starsSource === 'stale') notices.push('Star catalogue source unreachable - showing last cached data');
   if (planetsSource === 'stale') notices.push('NASA Exoplanet Archive unreachable - showing last cached data');
+  else if (planetsFailed) notices.push('NASA Exoplanet Archive unreachable - map will load without exoplanet overlay');
   if (notices.length) {
     const el = document.getElementById('loading-status');
     el?.classList.add('degraded');
@@ -1342,7 +1344,16 @@ async function init() {
   }
 
   setLoadStatus('Parsing data...');
-  const [stars, planetsArr] = await Promise.all([starsRes.json(), planetsRes.json()]);
+  const stars = await starsRes.json();
+  // Planets are optional - if the endpoint failed, continue with empty data
+  // so the star map still renders. Sol's own planets are added further down.
+  let planetsArr = [];
+  if (!planetsFailed) {
+    try {
+      const parsed = await planetsRes.json();
+      if (Array.isArray(parsed)) planetsArr = parsed;
+    } catch { /* ignore - empty planet overlay */ }
+  }
   // Index planets by HIP number and hostname for fast lookup
   for (const sys of planetsArr) {
     if (sys.hip) planetsByHip[String(sys.hip).trim()] = sys;
