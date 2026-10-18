@@ -6,7 +6,14 @@
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["astronomy", "three.js", "star-map", "exoplanets", "3d", "visualization"],
+  "keywords": [
+    "astronomy",
+    "three.js",
+    "star-map",
+    "exoplanets",
+    "3d",
+    "visualization"
+  ],
   "author": "Karl Smith <karl@karlsmith.design>",
   "license": "ISC",
   "funding": {
@@ -16,7 +23,7 @@
   "type": "commonjs",
   "dependencies": {
     "compression": "^1.8.1",
-    "csv-parse": "^6.2.0",
+    "csv-parse": "^7.0.3",
     "express": "^5.2.1",
     "node-fetch": "^3.3.2"
   }
