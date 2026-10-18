@@ -5,6 +5,7 @@ const { pipeline } = require('stream/promises');
 const { Writable } = require('stream');
 
 const CACHE_FILE = path.join(__dirname, 'hygdata_1000ly_v5.json');
+const FALLBACK_FILE = path.join(__dirname, 'stars_fallback.json');
 const HYG_URL = 'https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv';
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_DIST_PC = 1000 / 3.26156; // 1000 LY in parsecs
@@ -140,12 +141,30 @@ async function fetchAndCache() {
   return stars;
 }
 
-async function getStars() {
-  if (cacheIsValid()) {
-    console.log('Serving stars from cache');
-    return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+// Returns { path, source } for whichever file the /api/stars endpoint should stream:
+// fresh cache > stale cache > bundled fallback. Throws only if nothing is available.
+async function getStarsPath() {
+  if (cacheIsValid()) return { path: CACHE_FILE, source: 'cache' };
+
+  try {
+    await fetchAndCache();
+    return { path: CACHE_FILE, source: 'fresh' };
+  } catch (err) {
+    if (fs.existsSync(CACHE_FILE)) {
+      console.warn(`HYG fetch failed (${err.message}); serving stale cache`);
+      return { path: CACHE_FILE, source: 'stale' };
+    }
+    if (fs.existsSync(FALLBACK_FILE)) {
+      console.warn(`HYG fetch failed (${err.message}); serving bundled fallback (nearest stars)`);
+      return { path: FALLBACK_FILE, source: 'fallback' };
+    }
+    throw err;
   }
-  return fetchAndCache();
 }
 
-module.exports = { getStars };
+async function getStars() {
+  const { path: file } = await getStarsPath();
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+module.exports = { getStars, getStarsPath };

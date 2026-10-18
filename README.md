@@ -29,12 +29,15 @@ caches as hygdata_1000ly_v5.json        caches as planets.json
 
 ## Getting Started
 
+From the project root (e.g. `E:\Onedrive\WebStar`):
+
 ```bash
+cd E:\Onedrive\WebStar
 npm install
 node server.js
 ```
 
-Open `http://localhost:3000`
+Then open `http://localhost:3000` in your browser.
 
 Star data is fetched from GitHub on first run and cached locally. Subsequent loads are instant.
 

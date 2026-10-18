@@ -1324,6 +1324,23 @@ function setLoadStatus(msg) {
 async function init() {
   setLoadStatus('Loading star catalogue...');
   const [starsRes, planetsRes] = await Promise.all([fetch('/api/stars'), fetch('/api/planets')]);
+
+  // Surface degraded data sources (stale cache / bundled fallback) so the user knows
+  // the map isn't live. Pause briefly so the notice is readable before loading continues.
+  const starsSource = starsRes.headers.get('X-Data-Source');
+  const planetsSource = planetsRes.headers.get('X-Data-Source');
+  const notices = [];
+  if (starsSource === 'fallback') notices.push('Star catalogue unavailable - showing 50 nearest stars from bundled snapshot');
+  else if (starsSource === 'stale') notices.push('Star catalogue source unreachable - showing last cached data');
+  if (planetsSource === 'stale') notices.push('NASA Exoplanet Archive unreachable - showing last cached data');
+  if (notices.length) {
+    const el = document.getElementById('loading-status');
+    el?.classList.add('degraded');
+    setLoadStatus(notices.join(' . '));
+    await new Promise(r => setTimeout(r, 2500));
+    el?.classList.remove('degraded');
+  }
+
   setLoadStatus('Parsing data...');
   const [stars, planetsArr] = await Promise.all([starsRes.json(), planetsRes.json()]);
   // Index planets by HIP number and hostname for fast lookup

@@ -18,18 +18,31 @@ function cacheIsValid() {
   return (Date.now() - stat.mtimeMs) < CACHE_MAX_AGE_MS;
 }
 
+function readCache() {
+  return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+}
+
 async function getPlanets() {
   if (cacheIsValid()) {
     console.log('Serving planets from cache');
-    return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+    return { data: readCache(), source: 'cache' };
   }
 
   console.log('Fetching exoplanet data from NASA...');
-  const fetch = (await import('node-fetch')).default;
-  const res = await fetch(NASA_URL);
-  if (!res.ok) throw new Error(`NASA API HTTP ${res.status}`);
-
-  const raw = await res.json();
+  let raw;
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const res = await fetch(NASA_URL);
+    if (!res.ok) throw new Error(`NASA API HTTP ${res.status}`);
+    raw = await res.json();
+    if (!Array.isArray(raw)) throw new Error('NASA API returned non-array response (likely a TAP error)');
+  } catch (err) {
+    if (fs.existsSync(CACHE_FILE)) {
+      console.warn(`NASA fetch failed (${err.message}); serving stale cache`);
+      return { data: readCache(), source: 'stale' };
+    }
+    throw err;
+  }
   console.log(`Fetched ${raw.length} planet records`);
 
   // Group planets by host star — index by HIP and by hostname
@@ -61,7 +74,7 @@ async function getPlanets() {
   const result = [...Object.values(byHip), ...Object.values(byName)];
   fs.writeFileSync(CACHE_FILE, JSON.stringify(result));
   console.log(`Cached ${result.length} planetary systems`);
-  return result;
+  return { data: result, source: 'fresh' };
 }
 
 module.exports = { getPlanets };

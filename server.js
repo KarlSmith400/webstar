@@ -2,7 +2,7 @@ const express = require('express');
 const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
-const { getStars } = require('./data/stars');
+const { getStars, getStarsPath } = require('./data/stars');
 const { getPlanets } = require('./data/planets');
 
 const app = express();
@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Pre-warm: start fetching/caching star data immediately on startup
 // so the first browser request doesn't wait for a cold GitHub download
-const starsReady = getStars().catch(err => console.error('Star pre-fetch failed:', err.message));
+const starsReady = getStarsPath().catch(err => console.error('Star pre-fetch failed:', err.message));
 
 const CACHE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
@@ -30,16 +30,20 @@ function cacheHeaders(cacheFile, res) {
   }
 }
 
-const STARS_CACHE = path.join(__dirname, 'data', 'hygdata_1000ly_v5.json');
-
 app.get('/api/stars', async (req, res) => {
   try {
-    await starsReady; // wait for pre-warm, then ensure cache is fresh
-    await getStars();
-    const etag = cacheHeaders(STARS_CACHE, res);
-    if (etag && req.headers['if-none-match'] === etag) return res.sendStatus(304);
+    await starsReady; // wait for pre-warm
+    const { path: file, source } = await getStarsPath();
+    res.set('X-Data-Source', source);
+    res.set('Access-Control-Expose-Headers', 'X-Data-Source');
+    if (source === 'fresh' || source === 'cache') {
+      const etag = cacheHeaders(file, res);
+      if (etag && req.headers['if-none-match'] === etag) return res.sendStatus(304);
+    } else {
+      res.set('Cache-Control', 'no-store'); // stale/fallback — don't let browsers stick on it
+    }
     res.setHeader('Content-Type', 'application/json');
-    fs.createReadStream(STARS_CACHE).pipe(res); // stream directly — avoids parse+re-stringify
+    fs.createReadStream(file).pipe(res); // stream directly — avoids parse+re-stringify
   } catch (err) {
     console.error('Failed to load star data:', err.message);
     res.status(500).json({ error: 'Could not load star data' });
@@ -48,10 +52,16 @@ app.get('/api/stars', async (req, res) => {
 
 app.get('/api/planets', async (req, res) => {
   try {
-    const cacheFile = path.join(__dirname, 'data', 'planets.json');
-    const etag = cacheHeaders(cacheFile, res);
-    if (etag && req.headers['if-none-match'] === etag) return res.sendStatus(304);
-    const planets = await getPlanets();
+    const { data: planets, source } = await getPlanets();
+    res.set('X-Data-Source', source);
+    res.set('Access-Control-Expose-Headers', 'X-Data-Source');
+    if (source === 'fresh' || source === 'cache') {
+      const cacheFile = path.join(__dirname, 'data', 'planets.json');
+      const etag = cacheHeaders(cacheFile, res);
+      if (etag && req.headers['if-none-match'] === etag) return res.sendStatus(304);
+    } else {
+      res.set('Cache-Control', 'no-store'); // stale — don't let browsers stick on it
+    }
     res.json(planets);
   } catch (err) {
     console.error('Failed to load planet data:', err.message);
