@@ -46,9 +46,11 @@ Star data is fetched from GitHub on first run and cached locally. Subsequent loa
 ```
 WebStar/
 ├── server.js                    ← Express server + API routes
+├── export_100ly.js              ← One-off script: emits 100 LY star+planet data for the Project M fork
 ├── data/
-│   ├── stars.js                 ← HYG fetch, filter, cache logic
-│   ├── planets.js               ← NASA Exoplanet Archive fetch + cache logic
+│   ├── stars.js                 ← HYG fetch, filter, cache + outage fallback logic
+│   ├── planets.js               ← NASA Exoplanet Archive fetch + cache + outage fallback logic
+│   ├── stars_fallback.json      ← Bundled 100 LY snapshot (~4,000 stars, 141 KB gzipped), used only if HYG unreachable
 │   ├── hygdata_1000ly_v5.json   ← Star cache, 1000 LY radius (git-ignored)
 │   └── planets.json             ← Planet cache (git-ignored)
 ├── public/
@@ -153,11 +155,24 @@ WebStar is a **data visualisation tool** -it does not sell or redistribute raw d
 - `/api/stars` streams the cache file directly -no server-side JSON parse/re-stringify overhead
 - CSV parsed as a stream on first run -peak server memory ~60MB (fits Render 512MB free tier)
 
+## Resilience
+
+Both upstream data sources can fail (GitHub rate limiting / outage, NASA Exoplanet Archive maintenance). The server degrades gracefully rather than returning 500:
+
+| Scenario                               | Served                                              | `X-Data-Source` |
+|----------------------------------------|-----------------------------------------------------|-----------------|
+| Normal                                 | Fresh fetch or valid 7-day cache                    | `fresh`, `cache`     |
+| Upstream down, local cache available   | Stale cache (full 1000 LY stars / full planet set)  | `stale`              |
+| HYG down, no cache (fresh deploy)      | Bundled `stars_fallback.json` (~4,000 stars, 100 LY)  | `fallback`           |
+| NASA down, no cache                    | Empty planet set (star map still renders)           | `unavailable`        |
+
+The client reads `X-Data-Source` and briefly shows an amber notice on the loading overlay when data isn't live (e.g. *"NASA Exoplanet Archive unreachable - map will load without exoplanet overlay"*), then continues. Degraded responses send `Cache-Control: no-store` so clients re-check on next load rather than sticking on fallback data for the full 7-day cache window.
+
 ## Live Demo
 
 https://webstar-r7fc.onrender.com
 
-Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up while the server fetches and caches the star catalogue - a loading screen with live status messages covers this. Subsequent visits are instant.
+Hosted on Render free tier. First visit after a period of inactivity may take ~30 seconds to spin up while the server fetches and caches the star catalogue - a loading screen with live status messages covers this. Subsequent visits are instant. If an upstream source is unavailable, the demo falls back to cached or bundled data (see Resilience above) so the map always renders.
 
 ## Forks
 

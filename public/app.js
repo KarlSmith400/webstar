@@ -1331,7 +1331,7 @@ async function init() {
   const planetsSource = planetsRes.headers.get('X-Data-Source');
   const planetsFailed = !planetsRes.ok || planetsSource === 'unavailable';
   const notices = [];
-  if (starsSource === 'fallback') notices.push('Star catalogue unavailable - showing 50 nearest stars from bundled snapshot');
+  if (starsSource === 'fallback') notices.push('Star catalogue unavailable - showing bundled 100 LY snapshot');
   else if (starsSource === 'stale') notices.push('Star catalogue source unreachable - showing last cached data');
   if (planetsSource === 'stale') notices.push('NASA Exoplanet Archive unreachable - showing last cached data');
   else if (planetsFailed) notices.push('NASA Exoplanet Archive unreachable - map will load without exoplanet overlay');

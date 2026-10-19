@@ -155,7 +155,7 @@ async function getStarsPath() {
       return { path: CACHE_FILE, source: 'stale' };
     }
     if (fs.existsSync(FALLBACK_FILE)) {
-      console.warn(`HYG fetch failed (${err.message}); serving bundled fallback (nearest stars)`);
+      console.warn(`HYG fetch failed (${err.message}); serving bundled 100 LY fallback`);
       return { path: FALLBACK_FILE, source: 'fallback' };
     }
     throw err;

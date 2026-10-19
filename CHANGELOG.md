@@ -4,6 +4,20 @@ All notable changes to WebStar will be documented here.
 
 ---
 
+## [0.32.0] - 2026-10-19
+
+### Added
+- **Outage fallback for star and planet data** - the server degrades gracefully instead of returning 500 when upstream sources are unreachable; resolution chain is fresh > valid cache > stale cache > bundled snapshot (stars) or empty set (planets); responses carry an `X-Data-Source` header (`fresh`, `cache`, `stale`, `fallback`, `unavailable`) so the client can tell what it got
+- **Bundled star fallback** (`data/stars_fallback.json`) - 4,059 stars within 100 LY of Sol (572 KB raw, ~141 KB gzipped), used only when the HYG fetch fails on a fresh deploy with no cache; keeps the Render demo properly usable even if GitHub is unreachable, covering all nearby named stars (Vega, Fomalhaut, Procyon, Sirius, etc.)
+- **Degraded-source loading notice** - when star or planet data resolves to anything other than fresh/cache, the loading overlay briefly shows an amber message explaining what's missing (e.g. "NASA Exoplanet Archive unreachable - map will load without exoplanet overlay"), pauses 2.5s, then continues
+
+### Fixed
+- **Loading overlay no longer hangs forever when NASA is down** - the previous code assumed `/api/planets` always returned an array; during the NASA Exoplanet Archive outage on 2026-10-18 the endpoint 500ed, the client threw unhandled on `for (const sys of planetsArr)`, and the loading screen stuck with no visible error
+- **Planet data is now optional** - the star map renders without exoplanet markers if NASA is unavailable; Sol's own planets still work (hardcoded, not fetched)
+- **Browsers no longer cache degraded responses** - stale, fallback and unavailable responses send `Cache-Control: no-store` so clients re-check once upstream recovers, rather than sticking on degraded data for the full 7-day cache window
+
+---
+
 ## [0.31.0] - 2026-03-22
 
 ### Changed (Project M fork)
